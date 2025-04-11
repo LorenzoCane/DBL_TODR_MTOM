@@ -26,11 +26,21 @@ from take_off_func import take_off, cl_finder
 
 #***************************************************************************
 #constants
-
+airport_code = 'EBBR' #Bruxells
 full_mass = 78000.0 #kg
 brussels_lenght = 3638.0 #m
 brussel_alt = conv.convert(56.0, 'm', 'ft') #m
-cl_best = 1.61
+
+imp_data = {}
+with open('output_data/cl_results.txt', 'r') as f:
+    for line in f:
+        key, val = line.strip().split(':')
+        imp_data[key.strip()] = float(val.strip())
+
+cl_best = imp_data["C_l"]
+cl_err = imp_data["cl_err"]
+#print(f"C_l = {cl_best}, cl_err = {cl_err}")
+#cl_best = 1.61
 
 r_spec = 287.0 # (N*m) / (kg*K) 
 pathway_incl = 0.0 #deg
@@ -44,9 +54,12 @@ airborne_dist = asc / np.tan(conv.convert(climb_ang, 'deg', 'rad')) # m
 safe_margin_coef = 1.15
 
 os.makedirs('images', exist_ok=True)
+os.makedirs('output_data', exist_ok=True)
 img_dir = './images/'
-
 input_dir = './data/clean'
+img_path = './images/'
+out_dir = './output_data/'
+
 #***************************************************************************
 #aircraft
 aircraft_name = "A320"
@@ -60,7 +73,7 @@ engine = prop.engine(engine_name) #V2500-A1 turbofan engines
 wing_area = aircraft['wing']['area'] #wing area
 cd0 = aircraft['drag']['cd0']
 k = aircraft['drag']['k']
-mu = 0.017
+mu = aircraft['drag']['gears']
 #print(k)
 wrap = WRAP(ac=aircraft_name) #kinematic parameters
 
@@ -79,13 +92,12 @@ T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=brussel_a
 #***************************************************************************
 
 file_dict = {
-    "Historical": "Historical_JJA.csv",
-    "SSP126": "SSP126_JJA.csv",
-    "SSP370": "SSP370_JJA.csv",
-    "SSP585": "SSP585_JJA.csv"
+    "Historical": airport_code + "_Historical_JJA.csv",
+    "SSP126": airport_code + "_SSP126_JJA.csv",
+    "SSP370": airport_code + "_SSP370_JJA.csv",
+    "SSP585": airport_code + "_SSP585_JJA.csv"
 }
 
-img_name = 'Brussels_NOQDM.pdf'
 
 all_data = []  # list to hold each scenario's processed DataFrame
 for scenario, filename in file_dict.items():
@@ -110,7 +122,12 @@ df_all = pd.concat(all_data, ignore_index=True)
 print("\n=== TODR Summary by Scenario ===")
 print(df_all.groupby("Scenario")["TODR"].describe().round(2))
 
+#Save data for future plots and anal
+df_all.to_parquet(os.path.join(out_dir, f"{airport_code}_TODR_NOQDM.parquet"))
+
 # --- Create the Boxplot ---
+img_name = f'{airport_code}_NOQDM.pdf'
+
 sns.set_style("whitegrid")
 plt.figure(figsize=(8, 6))
 
@@ -129,7 +146,7 @@ plt.savefig(os.path.join(img_dir, img_name))
 #---------------------------------------------------------------------------
 n_bins = 50
 #TODR distr. hist
-hist_name = "Brussels_TODR_NOQDM_hist.pdf"
+hist_name = f"{airport_code}__TODR_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -152,7 +169,7 @@ plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(img_dir, hist_name))
 
 #temp hist
-hist_name = "Brussels_temp_NOQDM_hist.pdf"
+hist_name = f"{airport_code}__temp_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -176,7 +193,7 @@ plt.savefig(os.path.join(img_dir, hist_name))
 
 
 #sur pres hist
-hist_name = "Brussels_sp_NOQDM_hist.pdf"
+hist_name = f"{airport_code}__sp_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -199,7 +216,7 @@ plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(img_dir, hist_name))
 
 #rho pres hist
-hist_name = "Brussels_rho_NOQDM_hist.pdf"
+hist_name = f"{airport_code}__rho_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -223,13 +240,13 @@ plt.savefig(os.path.join(img_dir, hist_name))
 #***************************************************************************
 #with QDM
 file_dict = {
-    "Historical": "Historical_QDM_JJA.csv",
-    "SSP126": "SSP126_QDM_JJA.csv",
-    "SSP370": "SSP370_QDM_JJA.csv",
-    "SSP585": "SSP585_QDM_JJA.csv"
+    "Historical": airport_code + "_Historical_QDM_JJA.csv",
+    "SSP126": airport_code + "_SSP126_QDM_JJA.csv",
+    "SSP370": airport_code + "_SSP370_QDM_JJA.csv",
+    "SSP585": airport_code + "_SSP585_QDM_JJA.csv"
 }
 
-img_name = 'Brussels_QDM.pdf'
+img_name = f'{airport_code}_QDM.pdf'
 
 all_data = []  # list to hold each scenario's processed DataFrame
 for scenario, filename in file_dict.items():
@@ -252,6 +269,8 @@ for scenario, filename in file_dict.items():
 # Concatenate all the scenario DataFrames
 df_all = pd.concat(all_data, ignore_index=True)
 
+#Save for future
+df_all.to_parquet(os.path.join(out_dir, f"{airport_code}_TODR_QDM.parquet"))
 # --- Create the Boxplot ---
 sns.set_style("whitegrid")
 plt.figure(figsize=(8, 6))

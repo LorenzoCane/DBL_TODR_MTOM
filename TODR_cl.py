@@ -6,20 +6,16 @@ Deep Blue srl
 
 '''
 
-import intake
-import xarray as xr
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import time
-import inspect
 import pandas as pd
-from iminuit import Minuit
-from iminuit.cost import LeastSquares
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from openap import prop #aircraft and engine-related data
-from openap.drag import Drag # drag related
 from openap.kinematic import WRAP #set of kinematic models
 from openap.thrust import Thrust #thrust calc
 
@@ -43,7 +39,10 @@ airborne_dist = asc / np.tan(conv.convert(climb_ang, 'deg', 'rad')) # m
 safe_margin_coef = 1.15
 
 os.makedirs('images', exist_ok=True)
+os.makedirs('output_data', exist_ok=True)
 img_path = './images/'
+out_path = './output_data/'
+
 #***************************************************************************
 #config
 aircraft_name = "A320"
@@ -57,8 +56,8 @@ engine = prop.engine(engine_name) #V2500-A1 turbofan engines
 wing_area = aircraft['wing']['area'] #wing area
 cd0 = aircraft['drag']['cd0']
 k = aircraft['drag']['k']
-mu = 0.017
-print(cd0)
+mu = aircraft['drag']['gears']
+#print(mu)
 
 wrap = WRAP(ac=aircraft_name) #kinematic parameters
 
@@ -93,12 +92,13 @@ if (len(aircraft_mass) != len(to_manuf_value)):
 
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
 T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=0) for i in speed_val]) #N
-print(T)
+#print(T)
 
+'''
 #check     
 test = take_off(aircraft_mass[2], T[1], rho_isa, 1.14, cd0, k, wing_area, airborne_dist, mu= mu, return_velocity=True)
 print(test)
-
+'''
 #***************************************************************************
 #Find best C_l values for min, opt and max take-off velocities
 cl_values = []
@@ -124,23 +124,66 @@ print(f"C_l finding process results: C_l = {cl_best} +- {err_cl_best}")
 #model prediction and  gt - model perc diff
 model_to_dist = np.array([take_off(i, T[1], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu) for i in aircraft_mass])
 perc_diff = (to_manuf_value - model_to_dist) / to_manuf_value * 100.0
+print('Perc. difference between Manufacturer and model values:' )
 print(perc_diff)
 # Upper and lower errors from cl uncertainty
 model_upper = np.array([
-    take_off(m, T[0], rho_isa, np.min(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    take_off(m, T[1], rho_isa, np.min(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
     for m in aircraft_mass
 ])
 model_lower = np.array([
-    take_off(m, T[0], rho_isa, np.max(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    take_off(m, T[1], rho_isa, np.max(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
     for m in aircraft_mass
 ])
 
-# Asymmetric errors
+#Compute errors
 model_err_upper = abs(model_upper - model_to_dist)
 model_err_lower = abs(model_to_dist - model_lower)
 #print(model_err_lower)
 #print(model_err_upper)
 
+#***************************************************************************
+# Create a DataFrame with all the relevant data
+df = pd.DataFrame({
+    "mass_kg": aircraft_mass,
+    "mass_tonnes": aircraft_mass / 1000.,
+    "todr_manufacturer": to_manuf_value,
+    "todr_model": model_to_dist,
+    "todr_model_err_upper": model_err_upper,
+    "todr_model_err_lower": model_err_lower,
+    "todr_manufacturer_err": to_err,
+})
+
+# Add global values as metadata
+metadata_dict = {
+    "cl_best": cl_best,
+    "cl_err": err_cl_best,
+    "rho_isa": rho_isa,
+    "T_used": T[1],
+    "cd0": cd0,
+    "k": k,
+    "wing_area": wing_area,
+    "airborne_dist": airborne_dist,
+    "safe_margin_coef": safe_margin_coef,
+    "mu": mu,
+}
+
+# Convert to Arrow Table (no index)
+table = pa.Table.from_pandas(df, preserve_index=False)
+
+# Add metadata (must be encoded as bytes)
+encoded_meta = {str(k): str(v).encode("utf-8") for k, v in metadata_dict.items()}
+existing_meta = table.schema.metadata or {}
+merged_meta = {**existing_meta, **encoded_meta}
+table = table.replace_schema_metadata(merged_meta)
+
+# Save to parquet
+parquet_path = os.path.join(out_path, "cl_TODR_data.parquet")
+pq.write_table(table, parquet_path)
+print(f"Data with metadata written to {parquet_path}")
+
+#***************************************************************************
+#Plots
 plt.figure()
 
 # Model with asymmetric error bars

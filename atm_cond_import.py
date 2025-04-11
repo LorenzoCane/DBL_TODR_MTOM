@@ -4,8 +4,9 @@ import numpy as np
 import os
 from cmethods import adjust
 # Path
+airport_code = 'EBBR'
 os.makedirs("./data/clean", exist_ok=True) #output dir (clean data)
-file_path = "./data/cmip6_ACCESS-ESM1-5_EBBR.nc"
+file_path = f"./data/cmip6_ACCESS-ESM1-5_{airport_code}.nc"
 output_path = "./data/clean/"
 #Dataset
 ds = xr.open_dataset(file_path)
@@ -51,7 +52,7 @@ sp_370_jja =  sp_370.sel(time= sp_370['time'].dt.month.isin(sel_months))
 sp_585_jja =  sp_585.sel(time= sp_585['time'].dt.month.isin(sel_months))
 
 
-def process_scenario(var_temp_name, var_pres_name, time_range, scenario_name, output_path):
+def process_scenario(var_temp_name, var_pres_name, time_range, airport, scenario_name, output_path):
     """
     Processes data for a given scenario: selects mx2t24 and sp variables for the given time range,
     filters for JJA months, converts data to a DataFrame with extra columns,
@@ -109,11 +110,11 @@ def process_scenario(var_temp_name, var_pres_name, time_range, scenario_name, ou
     df = df.dropna(subset=['mx2t24', 'sp'])
     
     # Define output filename based on the scenario.
-    output_filename = f"{scenario_name}_JJA.csv"
+    output_filename = f"{airport}_{scenario_name}_JJA.csv"
     output_path = os.path.join(output_path, output_filename)
     # Save to CSV.
     df.to_csv(output_path, index=False)
-    print(f"Data for {scenario_name} scenario saved to {output_path}")
+    print(f"Data for {airport}_{scenario_name} scenario saved to {output_path}")
 
 
 # Process Historical data (1985-2014)
@@ -121,6 +122,7 @@ df_hist = process_scenario(
     var_temp_name='mx2t24_historical',
     var_pres_name='sp_historical',
     time_range=("1985-01-01", "2014-12-31"),
+    airport= airport_code,
     scenario_name="Historical",
     output_path=output_path
 )
@@ -130,6 +132,7 @@ df_ssp126 = process_scenario(
     var_temp_name='mx2t24_ssp126',
     var_pres_name='sp_ssp126',
     time_range=("2035-01-01", "2064-12-31"),
+    airport= airport_code,
     scenario_name="SSP126",
     output_path=output_path
 )
@@ -137,6 +140,7 @@ df_ssp370 = process_scenario(
     var_temp_name='mx2t24_ssp370',
     var_pres_name='sp_ssp370',
     time_range=("2035-01-01", "2064-12-31"),
+    airport= airport_code,
     scenario_name="SSP370",
     output_path=output_path
 )
@@ -144,6 +148,7 @@ df_ssp585 = process_scenario(
     var_temp_name='mx2t24_ssp585',
     var_pres_name='sp_ssp585',
     time_range=("2035-01-01", "2064-12-31"),
+    airport= airport_code, 
     scenario_name="SSP585",
     output_path=output_path
 )
@@ -162,7 +167,7 @@ def quantile_delta_mapping(obs, sim_hist, sim_fut):
     corrected = qobs + delta
     return corrected
 
-def process_scenario_qdm(var_temp_name, var_pres_name, time_range, scenario_name, output_path):
+def process_scenario_qdm(var_temp_name, var_pres_name, time_range, airport, scenario_name, output_path):
     """
     Processes and applies QDM correction to temperature and pressure data, saving a cleaned CSV.
     """
@@ -225,12 +230,12 @@ def process_scenario_qdm(var_temp_name, var_pres_name, time_range, scenario_name
     df = df[[col for col in desired_columns if col in df.columns]]
 
     # Save to CSV
-    output_filename = f"{scenario_name}_QDM_JJA.csv"
+    output_filename = f"{airport}_{scenario_name}_QDM_JJA.csv"
     df.to_csv(os.path.join(output_path, output_filename), index=False)
     print(f"QDM-corrected data for {scenario_name} saved to {output_path + output_filename}")
 
 # Apply QDM and save
-process_scenario_qdm('mx2t24_ssp126', 'sp_ssp126', ("2035-01-01", "2064-12-31"), "SSP126", output_path)
-process_scenario_qdm('mx2t24_ssp370', 'sp_ssp370', ("2035-01-01", "2064-12-31"), "SSP370", output_path)
-process_scenario_qdm('mx2t24_ssp585', 'sp_ssp585', ("2035-01-01", "2064-12-31"), "SSP585", output_path)
-process_scenario_qdm('mx2t24_historical', 'sp_historical', ("1985-01-01", "2014-12-31"), "Historical", output_path)
+process_scenario_qdm('mx2t24_ssp126', 'sp_ssp126', ("2035-01-01", "2064-12-31"), airport_code, "SSP126", output_path)
+process_scenario_qdm('mx2t24_ssp370', 'sp_ssp370', ("2035-01-01", "2064-12-31"), airport_code, "SSP370", output_path)
+process_scenario_qdm('mx2t24_ssp585', 'sp_ssp585', ("2035-01-01", "2064-12-31"), airport_code, "SSP585", output_path)
+process_scenario_qdm('mx2t24_historical', 'sp_historical', ("1985-01-01", "2014-12-31"), airport_code, "Historical", output_path)
