@@ -30,7 +30,7 @@ from take_off_func import take_off, cl_finder
 full_mass = 78000.0 #kg
 brussels_lenght = 3638.0 #m
 brussel_alt = conv.convert(56.0, 'm', 'ft') #m
-cl_best = 1.641
+cl_best = 1.61
 
 r_spec = 287.0 # (N*m) / (kg*K) 
 pathway_incl = 0.0 #deg
@@ -41,7 +41,7 @@ climb_ang = 7.7 # deg (see [Gratton et al. 2020])
 airborne_dist = asc / np.tan(conv.convert(climb_ang, 'deg', 'rad')) # m
 #print(airborne_dist)
 
-safe_margin_coef = 1.1
+safe_margin_coef = 1.15
 
 os.makedirs('images', exist_ok=True)
 img_dir = './images/'
@@ -102,7 +102,7 @@ for scenario, filename in file_dict.items():
     df["Scenario"] = scenario
     
     # Remove rows where TODR, temperature, or pressure are NaN
-    df = df.dropna(subset=["TODR", "mx2t24", "sp"])
+    #df = df.dropna(subset=["TODR", "mx2t24", "sp"])
     all_data.append(df)
 
 # Concatenate all the scenario DataFrames
@@ -126,8 +126,100 @@ plt.title("Computed Take-Off Distance Required (TODR)\n(JJA Data)")
 plt.tight_layout()
 plt.savefig(os.path.join(img_dir, img_name))
 
+#---------------------------------------------------------------------------
+n_bins = 50
+#TODR distr. hist
+hist_name = "Brussels_TODR_NOQDM_hist.pdf"
+# Get the unique scenarios
+scenarios = df_all['Scenario'].unique()
+n_scenarios = len(scenarios)
+
+# Create subplots
+fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+axs = axs.flatten()  # To easily index with a single loop
+
+# Plot each scenario in a different panel
+for i, scenario in enumerate(scenarios):
+    subset = df_all[df_all['Scenario'] == scenario]
+    axs[i].hist(subset['TODR'], bins=n_bins, color='skyblue', edgecolor='black')
+    axs[i].set_title(f"{scenario} Scenario")
+    axs[i].set_xlabel("TODR")
+    axs[i].set_ylabel("Frequency")
+    axs[i].grid(True)
+
+plt.tight_layout()
+plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+plt.savefig(os.path.join(img_dir, hist_name))
+
+#temp hist
+hist_name = "Brussels_temp_NOQDM_hist.pdf"
+# Get the unique scenarios
+scenarios = df_all['Scenario'].unique()
+n_scenarios = len(scenarios)
+
+# Create subplots
+fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+axs = axs.flatten()  # To easily index with a single loop
+
+# Plot each scenario in a different panel
+for i, scenario in enumerate(scenarios):
+    subset = df_all[df_all['Scenario'] == scenario]
+    axs[i].hist(subset['mx2t24'], bins=n_bins, color='skyblue', edgecolor='black')
+    axs[i].set_title(f"{scenario} Scenario")
+    axs[i].set_xlabel("T [K]")
+    axs[i].set_ylabel("Frequency")
+    axs[i].grid(True)
+
+plt.tight_layout()
+plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+plt.savefig(os.path.join(img_dir, hist_name))
 
 
+#sur pres hist
+hist_name = "Brussels_sp_NOQDM_hist.pdf"
+# Get the unique scenarios
+scenarios = df_all['Scenario'].unique()
+n_scenarios = len(scenarios)
+
+# Create subplots
+fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+axs = axs.flatten()  # To easily index with a single loop
+
+# Plot each scenario in a different panel
+for i, scenario in enumerate(scenarios):
+    subset = df_all[df_all['Scenario'] == scenario]
+    axs[i].hist(subset['sp'], bins=n_bins, color='skyblue', edgecolor='black')
+    axs[i].set_title(f"{scenario} Scenario")
+    axs[i].set_xlabel("sp [Pa]")
+    axs[i].set_ylabel("Frequency")
+    axs[i].grid(True)
+
+plt.tight_layout()
+plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+plt.savefig(os.path.join(img_dir, hist_name))
+
+#rho pres hist
+hist_name = "Brussels_rho_NOQDM_hist.pdf"
+# Get the unique scenarios
+scenarios = df_all['Scenario'].unique()
+n_scenarios = len(scenarios)
+
+# Create subplots
+fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+axs = axs.flatten()  # To easily index with a single loop
+
+# Plot each scenario in a different panel
+for i, scenario in enumerate(scenarios):
+    subset = df_all[df_all['Scenario'] == scenario]
+    axs[i].hist(subset['rho'], bins=n_bins, color='skyblue', edgecolor='black')
+    axs[i].set_title(f"{scenario} Scenario")
+    axs[i].set_xlabel("air density [kg m^-3]")
+    axs[i].set_ylabel("Frequency")
+    axs[i].grid(True)
+
+plt.tight_layout()
+plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+plt.savefig(os.path.join(img_dir, hist_name))
 #***************************************************************************
 #with QDM
 file_dict = {

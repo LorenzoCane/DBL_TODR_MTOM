@@ -10,7 +10,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
              margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False):
     vel = 0.0  # m/s
     d = 0.0    # m
-    dv = 1.0   # m/s
+    dv = 0.1   # m/s
     theta = conv.convert(theta, 'deg', 'rad')
 
     cd = cd0 + k * cl**2

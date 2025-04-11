@@ -96,11 +96,11 @@ def process_scenario(var_temp_name, var_pres_name, time_range, scenario_name, ou
     temp_upper_bound = temp_mean + 3 * temp_std
     pres_lower_bound = pres_mean - 3 * pres_std
     pres_upper_bound = pres_mean + 3 * pres_std
-    '''
+    
     # Apply the 3-sigma filtering for both 'mx2t24' and 'sp' columns.
     df = df[(df['mx2t24'] >= temp_lower_bound) & (df['mx2t24'] <= temp_upper_bound)]
     df = df[(df['sp'] >= pres_lower_bound) & (df['sp'] <= pres_upper_bound)]
-    '''
+    
     # Order the desired columns: Scenario, time, variant (if exists), mx2t24, sp, Year, Month, Day.
     desired_columns = ['Scenario', 'time', 'variant', 'mx2t24', 'sp', 'Year', 'Month', 'Day']
     df = df[[col for col in desired_columns if col in df.columns]]
