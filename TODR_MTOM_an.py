@@ -41,7 +41,7 @@ climb_ang = 7.7 # deg (see [Gratton et al. 2020])
 airborne_dist = asc / np.tan(conv.convert(climb_ang, 'deg', 'rad')) # m
 #print(airborne_dist)
 
-safe_margin_coef = 1.15
+safe_margin_coef = 1.1
 
 os.makedirs('images', exist_ok=True)
 img_dir = './images/'
