@@ -1,27 +1,21 @@
 
-import intake
-import xarray as xr
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 import time
-import inspect
 import pandas as pd
-from iminuit import Minuit
-from iminuit.cost import LeastSquares
+import pyarrow.parquet as pq
 
 from openap import prop #aircraft and engine-related data
-from openap.drag import Drag # drag related
 from openap.kinematic import WRAP #set of kinematic models
 from openap.thrust import Thrust #thrust calc
 
 from pprint import pprint #“pretty-print” arbitrary Python data structures 
 
 from utils import ComplexUnitConverter as conv
-from utils import rmsd
-from take_off_func import take_off, cl_finder
+from take_off_func import take_off
 
 
 #***************************************************************************
@@ -31,15 +25,30 @@ full_mass = 78000.0 #kg
 brussels_lenght = 3638.0 #m
 brussel_alt = conv.convert(56.0, 'm', 'ft') #m
 
-imp_data = {}
-with open('output_data/cl_results.txt', 'r') as f:
-    for line in f:
-        key, val = line.strip().split(':')
-        imp_data[key.strip()] = float(val.strip())
 
-cl_best = imp_data["C_l"]
-cl_err = imp_data["cl_err"]
-#print(f"C_l = {cl_best}, cl_err = {cl_err}")
+#Define path
+os.makedirs('images', exist_ok=True)
+os.makedirs('output_data', exist_ok=True)
+img_dir = './images/'
+input_dir = './data/clean'
+img_path = './images/'
+out_dir = './output_data/'
+# Load the Parquet file
+parquet_path = os.path.join(out_dir, "cl_TODR_data.parquet")
+table = pq.read_table(parquet_path)
+
+# Extract and decode metadata
+metadata = table.schema.metadata
+if metadata:
+    decoded_meta = {k.decode(): v.decode() for k, v in metadata.items()}
+    cl_best = float(decoded_meta["cl_best"])
+    cl_err = float(decoded_meta["cl_err"])
+    print(f"C_l best: {cl_best}")
+    print(f"C_l error: {cl_err}")
+else:
+    cl_best = 1.61
+    print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
+    cl_best = 1.61
 #cl_best = 1.61
 
 r_spec = 287.0 # (N*m) / (kg*K) 
@@ -53,12 +62,6 @@ airborne_dist = asc / np.tan(conv.convert(climb_ang, 'deg', 'rad')) # m
 
 safe_margin_coef = 1.15
 
-os.makedirs('images', exist_ok=True)
-os.makedirs('output_data', exist_ok=True)
-img_dir = './images/'
-input_dir = './data/clean'
-img_path = './images/'
-out_dir = './output_data/'
 
 #***************************************************************************
 #aircraft
