@@ -125,3 +125,38 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
     m.hesse()
     
     return m.values['cl'], m.errors['cl']
+
+#-----------------------------------------------------------------------------------------------------
+
+def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle):
+    mass = initial_mass
+
+    if take_off(mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist,margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False) < runway_length:
+        return mass  # already feasible
+
+    for step in [1e3, 1e2, 1e1, 1]:  # reduce mass by 1000, 100, 10, 1
+        while True:
+            todr = take_off(mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle)
+            if todr < runway_length:
+                mass += step  # step back up to refine
+                break
+            mass -= step  # keep reducing
+
+    return mass
+
+#-----------------------------------------------------------------------------------------------------
+
+def mtom_binary(runway_length, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle, 
+                     initial_mass, min_mass=60000, tolerance=1):
+    low = min_mass
+    high = initial_mass
+
+    while high - low > tolerance:
+        mid = (low + high) / 2
+        todr = take_off(mid, thrust, rho, cl, cd0, k, wing_area, airborne_dist, margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False)
+        if todr < runway_length:
+            low = mid
+        else:
+            high = mid
+
+    return round(low)
