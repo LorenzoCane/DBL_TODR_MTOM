@@ -1,0 +1,10 @@
+iminuit==2.31.1
+matplotlib==3.10.1
+numpy==2.2.4
+openap==2.2
+pandas==2.2.3
+pyarrow==19.0.1
+PyYAML==6.0.2
+PyYAML==6.0.2
+seaborn==0.13.2
+xarray==2025.3.0
