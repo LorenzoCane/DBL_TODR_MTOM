@@ -1,10 +1,46 @@
 '''
-Lorenzo Cane    
-Deep Blue srl
+    ***************************************************************************
+    Project : AEROPLANE
+    Module  : TODR, MTOM and CC
+    Author  : Lorenzo Cane
+    Company : Deep Blue srl
+    Created : 11/04/2025
+    Updated : 14/04/2025
+    Version : v1.0.0
+    -------------------------------------------------------------------------------
+    - Description:
+        This script performs a take-off distance analysis for various aircraft 
+        masses using both manufacturer data and model estimates. It loads aircraft, 
+        engine, and environmental configuration from a YAML config file, computes 
+        the optimal lift coefficient (C_l) by minimizing RMSD between model and 
+        reference data, and evaluates model performance through percentage error.
 
-07/04/2025
+        Final results are exported as a Parquet file (with metadata), and a plot of 
+        TODR vs. mass is generated as a PDF.
 
+    - Main Components:
+        - Config loading from config.yml
+        - Aircraft/engine specification via OpenAP
+        - TODR calculation via take_off() model
+        - C_l optimization via cl_finder()
+        - Error analysis and result plotting
+        - Export to Apache Parquet with metadata
+
+    - Dependencies:
+        - numpy, pandas, matplotlib, pyarrow, yaml, openap, utils (local), take_off_func (local)
+
+    - Outputs:
+        - cl_TODR_data.parquet (model results + metadata)
+        - TODR_mass.pdf (plot of TODR vs. aircraft mass)
+
+    - Notes:
+        - Replace config.yml with manual config values if needed
+        - Ensure all necessary folders and data files exist before running (see README.md)
+
+
+    ***************************************************************************
 '''
+
 
 import numpy as np
 import pandas as pd

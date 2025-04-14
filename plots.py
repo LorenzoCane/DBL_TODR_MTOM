@@ -119,7 +119,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     sns.boxplot(x="Scenario", y="TODR", data=df_all, whis =1.5, order=order, palette=palette, showfliers=True)
     plt.xlabel("Scenario")
     plt.ylabel("TODR [m]")
-    plt.title(f"Take-Off Distance Required (TODR)\n(JJA Data) - {airport_code} - {id}")
+    plt.title(f"TODR (JJA) {aircraft_name} - {engine_name} - {airport_code} - {id}")
     #sns.despine()
     plt.tight_layout()
     plt.savefig(os.path.join(img_path, img_name))
