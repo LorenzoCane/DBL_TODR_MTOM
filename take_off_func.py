@@ -149,7 +149,7 @@ def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airbor
 #-----------------------------------------------------------------------------------------------------
 
 def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle, 
-                      min_mass=60000, tol=1, iter_max = 1.e6):
+                      min_mass=60000, tol=0.5, iter_max = 1.e6):
     low = min_mass
     high = initial_mass
     iter = 0

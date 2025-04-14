@@ -123,14 +123,14 @@ print(f'Fixed TODR: {test_runway} m')
 
 #Williams et al. code
 start_time = time.monotonic()
-mtom_cl = [mtom(lenght, aircraft_mass, T[1], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
+mtom_cl = [mtom(lenght, aircraft_mass, T[0], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
             safe_margin_coef, mu, pathway_incl) for lenght in test_runway]
 end_time = time.monotonic()
 classic_time = timedelta(seconds = end_time - start_time).total_seconds()
 
 #Binary search
 start_time = time.monotonic()
-mtom_bin = [mtom_binary(lenght, aircraft_mass, T[1], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
+mtom_bin = [mtom_binary(lenght, aircraft_mass, T[0], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
             safe_margin_coef, mu, pathway_incl, min_mass=50000, tol=1) for lenght in test_runway]
 end_time = time.monotonic()
 bin_time = timedelta(seconds = end_time - start_time).total_seconds()

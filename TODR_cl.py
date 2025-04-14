@@ -204,7 +204,7 @@ print(f"C_l finding process results: C_l = {cl_best} +- {err_cl_best}")
 #Error analysis
 
 #model prediction and  gt - model perc diff
-model_to_dist = np.array([take_off(i, T[1], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu) for i in aircraft_mass])
+model_to_dist = np.array([take_off(i, T[0], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu) for i in aircraft_mass])
 perc_diff = (model_to_dist - to_manuf_value) / to_manuf_value * 100.0
 
 print('-------------------------------------------------')

@@ -203,7 +203,7 @@ for scenario, filename in file_dict.items():
     df["rho"] = df["sp"] / (r_spec * df["mx2t24"])
     
     # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl, dv = 0.1), axis=1)
+    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[0], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl, dv = 0.1), axis=1)
     
     # Add a column for the scenario label
     df["Scenario"] = scenario
