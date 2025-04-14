@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import yaml
 import time
 import pandas as pd
 import pyarrow as pa
@@ -26,15 +27,54 @@ from utils import rmsd
 from take_off_func import take_off, cl_finder
 
 #***************************************************************************
-#constants
+#import from configuration file config.yml
+config_file = 'config.yml'
+
+with open(config_file, 'r') as file:
+    config = yaml.safe_load(file)
+
+
+# Accessing different sections
+img_path = config['Dir']['img_dir']
+output_path = config['Dir']['output_dir']
+clim_data_dir = config['Dir']['clim_data_dir']
+clean_data_dir = config['Dir']['clean_data_dir']
+
+r_spec = config['Constants']['r_spec']
+pathway_incl = config['Constants']['pathway_incl']
+asc_ft = config['Constants']['asc']
+climb_angle = config['Constants']['climb_angle']
+safe_margin_coef = config['Constants']['margin_coef']
+
+isa_temp = config['ISA']['isa_temp']
+isa_pr = config['ISA']['isa_pr']
+isa_alt = config['ISA']['isa_alt']
+
+aircraft_name = config['Aircraft']['aircr_name']
+engine_name = config['Aircraft']['aircr_engine']
+aircraft_mass = config['Aircraft']['aircr_full_m']
+
+airport_code = config['Airport']['airport_code']
+airport_length = config['Airport']['airport_lenght']
+airport_alt = config['Airport']['airport_alt']
+
+climate_model = config['Climate']['model']
+climate_months = config['Climate']['months']
+
+print(f'Configuration successfully loaded from {config_file}')
+
+'''
+#***************************************************************************
+#Manual config (keep it commented if not needed)
 r_spec = 287.0 # (N*m) / (kg*K) 
+#ISA conditions
+temp_isa = conv.convert(15.0, 'celsius', 'kelvin') #K (15°C)
+pres_isa = 101325 #Pa (1013.25 hPa)
+
 pathway_incl = 0.0 #deg
 
 asc = conv.convert(35.0, 'ft', 'm') # m
 climb_ang = 7.7 # deg (see [Gratton et al. 2020])
-
-airborne_dist = asc / np.tan(conv.convert(climb_ang, 'deg', 'rad')) # m
-#print(airborne_dist)
 
 safe_margin_coef = 1.15
 
@@ -43,13 +83,22 @@ os.makedirs('output_data', exist_ok=True)
 img_path = './images/'
 out_path = './output_data/'
 
-#***************************************************************************
-#config
 aircraft_name = "A320"
 engine_name = "V2500-A1"
 
 #available_aircraft = prop.available_aircraft() #list of avaib aircraft if needed
+#***************************************************************************
+'''
+#***************************************************************************
+#Ensure dirs existance
+os.makedirs(img_path, exist_ok=True)
+os.makedirs(output_path, exist_ok=True)
+#airborne dist
+asc_m = conv.convert(asc_ft, 'ft', 'm') # m
+airborne_dist = asc_m / np.tan(conv.convert(climb_angle, 'deg', 'rad')) # m
+#print(airborne_dist)
 
+#aircraft specif.
 aircraft = prop.aircraft(aircraft_name) #airbus A320
 #pprint(aircraft)
 engine = prop.engine(engine_name) #V2500-A1 turbofan engines
@@ -59,25 +108,25 @@ k = aircraft['drag']['k']
 mu = aircraft['drag']['gears']
 #print(mu)
 
+#aircraft TO speeds
 wrap = WRAP(ac=aircraft_name) #kinematic parameters
-
 to_speed = wrap.takeoff_speed() # m/s Take-off speed. order: default (optimum), minimum, maximum
 #print(to_speed)
-
 opt_to_speed = to_speed['default'] #m/s
 min_to_speed = to_speed['minimum'] #m/s
 max_to_speed = to_speed['maximum'] #m/s
 speed_val = np.sort([s for s in list(to_speed.values())[:3]])
 #print(speed_val)
-#----------------------------------------------------------------------------
-#ISA conditions
-temp_isa = conv.convert(15.0, 'celsius', 'kelvin') #K (15°C)
-pres_isa = 101325 #Pa (1013.25 hPa)
 
-rho_isa = pres_isa / (r_spec * temp_isa) 
+#aircraft thrust
+thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
+T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=0) for i in speed_val]) #N
+#print(T)
+
+rho_isa = isa_pr / (r_spec * isa_temp) 
 
 #***************************************************************************
-# check TO dostance calculation (toy conditions)
+# check TO distance calculation method (toy conditions)
 
 aircraft_mass = np.array([61235., 63503.,65771., 68039., 70307., 72575., 74843., 77111., 79379.]) #kg
 a_mass_err = np.ones(len(aircraft_mass))
@@ -90,10 +139,6 @@ if (len(aircraft_mass) != len(to_manuf_value)):
 #print(len(aircraft_mass) == len(a_mass_err))
 
 
-thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
-T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=0) for i in speed_val]) #N
-#print(T)
-
 '''
 #check     
 test = take_off(aircraft_mass[2], T[1], rho_isa, 1.14, cd0, k, wing_area, airborne_dist, mu= mu, return_velocity=True)
@@ -103,10 +148,11 @@ print(test)
 #Find best C_l values for min, opt and max take-off velocities
 cl_values = []
 cl_rsmd = []
+print('-------------------------------------------------')
 for thr in T:
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
                                thr, rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu = mu,
-                               theta = 0.0, cl_min=1.0, cl_max=1.9, cl_step=0.01)
+                               theta = 0.0, cl_min=1.0, cl_max=2.01, cl_step=0.01)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
@@ -123,9 +169,13 @@ print(f"C_l finding process results: C_l = {cl_best} +- {err_cl_best}")
 
 #model prediction and  gt - model perc diff
 model_to_dist = np.array([take_off(i, T[1], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu) for i in aircraft_mass])
-perc_diff = (to_manuf_value - model_to_dist) / to_manuf_value * 100.0
+perc_diff = (model_to_dist - to_manuf_value) / to_manuf_value * 100.0
+
+print('-------------------------------------------------')
 print('Perc. difference between Manufacturer and model values:' )
 print(perc_diff)
+print(f'Mean abs perc. difference: {np.mean(abs(perc_diff))} %')
+print('-------------------------------------------------')
 # Upper and lower errors from cl uncertainty
 model_upper = np.array([
     take_off(m, T[1], rho_isa, np.min(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
@@ -178,7 +228,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(out_path, "cl_TODR_data.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
 pq.write_table(table, parquet_path)
 print(f"Data with metadata written to {parquet_path}")
 

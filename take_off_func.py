@@ -6,13 +6,12 @@ from utils import ComplexUnitConverter as conv
 from utils import rmsd
 
 
-def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
-             margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False):
+def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
+             mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = 0.1):
     vel = 0.0  # m/s
     d = 0.0    # m
-    dv = 0.1   # m/s
+    
     theta = conv.convert(theta, 'deg', 'rad')
-
     cd = cd0 + k * cl**2
     weight = m * 9.81
    
@@ -61,7 +60,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                 cd_0, k_p, wing_area, airborne_dist, safe_margin_coeff, 
                 mu, theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01):
     
-
+    dv_val = 0.5
     fixed_params = dict(thrust=thr,
                         rho=rho_isa,
                         cd0=cd_0,
@@ -75,10 +74,10 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                         return_velocity=False
                     )
     def take_off_wrapper(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
-                     margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False):
+                     margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = dv_val):
         results =  np.array([take_off(i, thrust, rho, cl, cd0, k, w_area, airborne_d,
                     margin_coeff=margin_coeff, mu=mu, theta=theta,
-                    lift_frac=lift_frac, return_velocity=return_velocity) for i in m])
+                    lift_frac=lift_frac, return_velocity=return_velocity, dv= dv) for i in m])
         return results
     
 
@@ -113,11 +112,13 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                mu=mu,
                theta=theta, 
                lift_frac=1.0, 
-               return_velocity=False
+               return_velocity=False,
+               dv = dv_val
                )
     
     # Fix all parameters except cl.
-    m.fixed['thrust', 'rho', 'cd0', 'k', 'w_area', 'airborne_d', 'margin_coeff', 'mu', 'theta', 'lift_frac', 'return_velocity'] = True
+    m.fixed['thrust', 'rho', 'cd0', 'k', 'w_area', 'airborne_d', 'margin_coeff', 'mu', 'theta',
+             'lift_frac', 'return_velocity', 'dv'] = True
     m.limits['cl'] = (cl_min, cl_max)
     
     m.migrad()

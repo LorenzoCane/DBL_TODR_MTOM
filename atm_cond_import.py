@@ -2,16 +2,55 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 import os
-from cmethods import adjust
-# Path
-airport_code = 'EBBR'
-os.makedirs("./data/clean", exist_ok=True) #output dir (clean data)
-file_path = f"./data/cmip6_ACCESS-ESM1-5_{airport_code}.nc"
+import yaml
+
+#***************************************************************************
+#import from configuration file config.yml
+config_file = 'config.yml'
+
+with open(config_file, 'r') as file:
+    config = yaml.safe_load(file)
+
+
+# Accessing different sections
+img_path = config['Dir']['img_dir']
+output_path = config['Dir']['output_dir']
+clim_data_dir = config['Dir']['clim_data_dir']
+clean_data_dir = config['Dir']['clean_data_dir']
+
+r_spec = config['Constants']['r_spec']
+pathway_incl = config['Constants']['pathway_incl']
+asc_ft = config['Constants']['asc']
+climb_angle = config['Constants']['climb_angle']
+safe_margin_coef = config['Constants']['margin_coef']
+
+isa_temp = config['ISA']['isa_temp']
+isa_pr = config['ISA']['isa_pr']
+isa_alt = config['ISA']['isa_alt']
+
+aircraft_name = config['Aircraft']['aircr_name']
+engine_name = config['Aircraft']['aircr_engine']
+aircraft_mass = config['Aircraft']['aircr_full_m']
+
+airport_code = config['Airport']['airport_code']
+airport_length = config['Airport']['airport_lenght']
+airport_alt = config['Airport']['airport_alt']
+
+climate_model = config['Climate']['model']
+climate_months = config['Climate']['months']
+
+print(f'Configuration successfully loaded from {config_file}')
+
+#Ensure dir existance and create paths
+os.makedirs(clean_data_dir, exist_ok=True) #output dir (clean data)
+file_path = f"./data/cmip6_{climate_model}_{airport_code}.nc"
 output_path = "./data/clean/"
 #Dataset
 ds = xr.open_dataset(file_path)
-sel_months = [6, 7, 8]
+sel_months = climate_months
 
+#***************************************************************************
+'''
 #Some tests
 # Print a summary of the dataset
 #print(ds)
@@ -50,7 +89,9 @@ sp_hist_jja = sp_hist.sel(time= sp_hist['time'].dt.month.isin(sel_months))
 sp_126_jja =  sp_126.sel(time= sp_126['time'].dt.month.isin(sel_months))
 sp_370_jja =  sp_370.sel(time= sp_370['time'].dt.month.isin(sel_months))
 sp_585_jja =  sp_585.sel(time= sp_585['time'].dt.month.isin(sel_months))
-
+'''
+#***************************************************************************
+#Define functions
 
 def process_scenario(var_temp_name, var_pres_name, time_range, airport, scenario_name, output_path):
     """

@@ -4,9 +4,12 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+import yaml
 import time
 import pandas as pd
 import pyarrow.parquet as pq
+import warnings
+warnings.filterwarnings('ignore') #to exclude sns warning
 
 from openap import prop #aircraft and engine-related data
 from openap.kinematic import WRAP #set of kinematic models
@@ -17,13 +20,78 @@ from pprint import pprint #“pretty-print” arbitrary Python data structures
 from utils import ComplexUnitConverter as conv
 from take_off_func import take_off
 
-
 #***************************************************************************
-#constants
+#import from configuration file config.yml
+config_file = 'config.yml'
+
+with open(config_file, 'r') as file:
+    config = yaml.safe_load(file)
+
+
+# Accessing different sections
+img_path = config['Dir']['img_dir']
+output_path = config['Dir']['output_dir']
+clim_data_dir = config['Dir']['clim_data_dir']
+clean_data_dir = config['Dir']['clean_data_dir']
+
+r_spec = config['Constants']['r_spec']
+pathway_incl = config['Constants']['pathway_incl']
+asc_ft = config['Constants']['asc']
+climb_angle = config['Constants']['climb_angle']
+safe_margin_coef = config['Constants']['margin_coef']
+
+isa_temp = config['ISA']['isa_temp']
+isa_pr = config['ISA']['isa_pr']
+isa_alt = config['ISA']['isa_alt']
+
+aircraft_name = config['Aircraft']['aircr_name']
+engine_name = config['Aircraft']['aircr_engine']
+aircraft_mass = config['Aircraft']['aircr_full_m']
+
+airport_code = config['Airport']['airport_code']
+airport_length = config['Airport']['airport_lenght']
+airport_alt_m = config['Airport']['airport_alt']
+airport_alt_ft = conv.convert(airport_alt_m, 'm', 'ft')
+
+climate_model = config['Climate']['model']
+climate_months = config['Climate']['months']
+
+print(f'Configuration successfully loaded from {config_file}')
+print('-------------------------------------------------')
+
+#ensure path existance
+os.makedirs(img_path, exist_ok=True)
+os.makedirs(output_path, exist_ok=True)
+# Load the Parquet file
+parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+table = pq.read_table(parquet_path)
+# Extract and decode metadata
+metadata = table.schema.metadata
+if metadata:
+    decoded_meta = {k.decode(): v.decode() for k, v in metadata.items()}
+    cl_best = float(decoded_meta["cl_best"])
+    cl_err = float(decoded_meta["cl_err"])
+    print(f"C_l best: {cl_best}")
+    print(f"C_l error: {cl_err}")
+    print('-------------------------------------------------')
+else:
+    cl_best = 1.61
+    print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
+    cl_best = 1.61
+#cl_best = 1.61
+
+#airborne dist
+asc_m = conv.convert(asc_ft, 'ft', 'm') # m
+airborne_dist = asc_m / np.tan(conv.convert(climb_angle, 'deg', 'rad')) # m
+#print(airborne_dist)
+
+'''
+#***************************************************************************
+#Manual config (keep it commented if not needed)
 airport_code = 'EBBR' #Bruxells
 full_mass = 78000.0 #kg
 brussels_lenght = 3638.0 #m
-brussel_alt = conv.convert(56.0, 'm', 'ft') #m
+airport_alt = conv.convert(56.0, 'm', 'ft') #m
 
 
 #Define path
@@ -33,23 +101,7 @@ img_dir = './images/'
 input_dir = './data/clean'
 img_path = './images/'
 out_dir = './output_data/'
-# Load the Parquet file
-parquet_path = os.path.join(out_dir, "cl_TODR_data.parquet")
-table = pq.read_table(parquet_path)
 
-# Extract and decode metadata
-metadata = table.schema.metadata
-if metadata:
-    decoded_meta = {k.decode(): v.decode() for k, v in metadata.items()}
-    cl_best = float(decoded_meta["cl_best"])
-    cl_err = float(decoded_meta["cl_err"])
-    print(f"C_l best: {cl_best}")
-    print(f"C_l error: {cl_err}")
-else:
-    cl_best = 1.61
-    print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
-    cl_best = 1.61
-#cl_best = 1.61
 
 r_spec = 287.0 # (N*m) / (kg*K) 
 pathway_incl = 0.0 #deg
@@ -61,15 +113,14 @@ airborne_dist = asc / np.tan(conv.convert(climb_ang, 'deg', 'rad')) # m
 #print(airborne_dist)
 
 safe_margin_coef = 1.15
-
-
-#***************************************************************************
-#aircraft
 aircraft_name = "A320"
 engine_name = "V2500-A1"
 
 #available_aircraft = prop.available_aircraft() #list of avaib aircraft if needed
+'''
 
+#***************************************************************************
+#aircraft specif.
 aircraft = prop.aircraft(aircraft_name) #airbus A320
 #pprint(aircraft)
 engine = prop.engine(engine_name) #V2500-A1 turbofan engines
@@ -78,22 +129,23 @@ cd0 = aircraft['drag']['cd0']
 k = aircraft['drag']['k']
 mu = aircraft['drag']['gears']
 #print(k)
-wrap = WRAP(ac=aircraft_name) #kinematic parameters
 
+#aircraft TO speed
+wrap = WRAP(ac=aircraft_name) #kinematic parameters
 to_speed = wrap.takeoff_speed() # m/s Take-off speed. order: default (optimum), minimum, maximum
 #print(to_speed)
-
 opt_to_speed = to_speed['default'] #m/s
 min_to_speed = to_speed['minimum'] #m/s
 max_to_speed = to_speed['maximum'] #m/s
 speed_val = np.sort([s for s in list(to_speed.values())[:3]])
-print(speed_val)
+#print(speed_val)
 
+#Thrust
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
-T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=brussel_alt) for i in speed_val]) #N
+T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=airport_alt_ft) for i in speed_val]) #N
 
 #***************************************************************************
-
+#Acces .csv file
 file_dict = {
     "Historical": airport_code + "_Historical_JJA.csv",
     "SSP126": airport_code + "_SSP126_JJA.csv",
@@ -105,13 +157,13 @@ file_dict = {
 all_data = []  # list to hold each scenario's processed DataFrame
 for scenario, filename in file_dict.items():
     # Read the CSV; each file should have at least columns: "mx2t24" (temperature, [K]) and "sp" (pressure, [Pa])
-    df = pd.read_csv(os.path.join(input_dir, filename))
+    df = pd.read_csv(os.path.join(clean_data_dir, filename))
     
     # Compute air density: rho = Pressure / (R * Temperature)
     df["rho"] = df["sp"] / (r_spec * df["mx2t24"])
     
     # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(full_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis=1)
+    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl, dv = 0.1), axis=1)
     
     # Add a column for the scenario label
     df["Scenario"] = scenario
@@ -124,11 +176,18 @@ for scenario, filename in file_dict.items():
 df_all = pd.concat(all_data, ignore_index=True)
 print("\n=== TODR Summary by Scenario ===")
 print(df_all.groupby("Scenario")["TODR"].describe().round(2))
+print('-------------------------------------------------')
+
 
 #Save data for future plots and anal
-df_all.to_parquet(os.path.join(out_dir, f"{airport_code}_TODR_NOQDM.parquet"))
+save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM.parquet")
+df_all.to_parquet(save_path)
+print(f'All processed data saved in {save_path}')
+print('-------------------------------------------------')
 
-# --- Create the Boxplot ---
+
+#***************************************************************************
+#Create the Boxplot and hist
 img_name = f'{airport_code}_NOQDM.pdf'
 
 sns.set_style("whitegrid")
@@ -144,7 +203,7 @@ plt.ylabel("TODR [m]")
 plt.title("Computed Take-Off Distance Required (TODR)\n(JJA Data)")
 #sns.despine()
 plt.tight_layout()
-plt.savefig(os.path.join(img_dir, img_name))
+plt.savefig(os.path.join(img_path, img_name))
 
 #---------------------------------------------------------------------------
 n_bins = 50
@@ -169,7 +228,7 @@ for i, scenario in enumerate(scenarios):
 
 plt.tight_layout()
 plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
-plt.savefig(os.path.join(img_dir, hist_name))
+plt.savefig(os.path.join(img_path, hist_name))
 
 #temp hist
 hist_name = f"{airport_code}__temp_NOQDM_hist.pdf"
@@ -192,7 +251,7 @@ for i, scenario in enumerate(scenarios):
 
 plt.tight_layout()
 plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
-plt.savefig(os.path.join(img_dir, hist_name))
+plt.savefig(os.path.join(img_path, hist_name))
 
 
 #sur pres hist
@@ -216,7 +275,7 @@ for i, scenario in enumerate(scenarios):
 
 plt.tight_layout()
 plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
-plt.savefig(os.path.join(img_dir, hist_name))
+plt.savefig(os.path.join(img_path, hist_name))
 
 #rho pres hist
 hist_name = f"{airport_code}__rho_NOQDM_hist.pdf"
@@ -239,7 +298,8 @@ for i, scenario in enumerate(scenarios):
 
 plt.tight_layout()
 plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
-plt.savefig(os.path.join(img_dir, hist_name))
+plt.savefig(os.path.join(img_path, hist_name))
+
 #***************************************************************************
 #with QDM
 file_dict = {
@@ -254,13 +314,13 @@ img_name = f'{airport_code}_QDM.pdf'
 all_data = []  # list to hold each scenario's processed DataFrame
 for scenario, filename in file_dict.items():
     # Read the CSV; each file should have at least columns: "mx2t24" (temperature, [K]) and "sp" (pressure, [Pa])
-    df = pd.read_csv(os.path.join(input_dir, filename))
+    df = pd.read_csv(os.path.join(clean_data_dir, filename))
     
     # Compute air density: rho = Pressure / (R * Temperature)
     df["rho"] = df["sp"] / (r_spec * df["mx2t24"])
     
     # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(full_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis=1)
+    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis=1)
     
     # Add a column for the scenario label
     df["Scenario"] = scenario
@@ -273,8 +333,8 @@ for scenario, filename in file_dict.items():
 df_all = pd.concat(all_data, ignore_index=True)
 
 #Save for future
-df_all.to_parquet(os.path.join(out_dir, f"{airport_code}_TODR_QDM.parquet"))
-# --- Create the Boxplot ---
+df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM.parquet"))
+#Create the Boxplot
 sns.set_style("whitegrid")
 plt.figure(figsize=(8, 6))
 
@@ -289,6 +349,6 @@ plt.ylabel("TODR [m]")
 plt.title("Computed Take-Off Distance Required (TODR)\n(JJA Data)")
 #sns.despine()
 plt.tight_layout()
-plt.savefig(os.path.join(img_dir, img_name))
+plt.savefig(os.path.join(img_path, img_name))
 
-
+print(f'Images saved in {img_path}')

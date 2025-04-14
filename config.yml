@@ -18,7 +18,7 @@ Constants:
 
   #ISA conditions
 ISA:
-  isa_temp: 15.0 #°C
+  isa_temp: 288.15 #K
   isa_pr: 101325 #Pa
   isa_alt: 0.0 #m
 
@@ -32,7 +32,7 @@ Aircraft:
 Airport:
   airport_code: 'EBBR'
   airport_lenght: 3680.0 #m
-  airport_alt: 0.0 #m
+  airport_alt: 56.0 #m
 
 #Climate data selection
 Climate:
