@@ -38,3 +38,5 @@ Airport:
 Climate:
   model: 'ACCESS-ESM1-5'
   months: [ 6, 7, 8 ]
+
+speed: 0.1

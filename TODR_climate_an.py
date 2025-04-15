@@ -96,6 +96,8 @@ airport_alt_ft = conv.convert(airport_alt_m, 'm', 'ft')
 climate_model = config['Climate']['model']
 climate_months = config['Climate']['months']
 
+dv_step = config['speed']
+
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
 
@@ -203,7 +205,8 @@ for scenario, filename in file_dict.items():
     df["rho"] = df["sp"] / (r_spec * df["mx2t24"])
     
     # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[0], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl, dv = 0.1), axis=1)
+    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, 
+                                               airborne_dist, safe_margin_coef, mu, pathway_incl, dv = dv_step), axis=1)
     
     # Add a column for the scenario label
     df["Scenario"] = scenario
@@ -220,11 +223,12 @@ print('-------------------------------------------------')
 
 
 #Save data for future plots and anal
-save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM.parquet")
+save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet")
 df_all.to_parquet(save_path)
 print(f'All processed data saved in {save_path}')
 print('-------------------------------------------------')
 
+'''
 #***************************************************************************
 #Create the Boxplot and hist
 img_name = f'{airport_code}_NOQDM.pdf'
@@ -247,7 +251,7 @@ plt.savefig(os.path.join(img_path, img_name))
 #---------------------------------------------------------------------------
 n_bins = 50
 #TODR distr. hist
-hist_name = f"{airport_code}__TODR_NOQDM_hist.pdf"
+hist_name = f"{airport_code}_TODR_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -270,7 +274,7 @@ plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(img_path, hist_name))
 
 #temp hist
-hist_name = f"{airport_code}__temp_NOQDM_hist.pdf"
+hist_name = f"{airport_code}_temp_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -294,7 +298,7 @@ plt.savefig(os.path.join(img_path, hist_name))
 
 
 #sur pres hist
-hist_name = f"{airport_code}__sp_NOQDM_hist.pdf"
+hist_name = f"{airport_code}_sp_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -317,7 +321,7 @@ plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(img_path, hist_name))
 
 #rho pres hist
-hist_name = f"{airport_code}__rho_NOQDM_hist.pdf"
+hist_name = f"{airport_code}_rho_NOQDM_hist.pdf"
 # Get the unique scenarios
 scenarios = df_all['Scenario'].unique()
 n_scenarios = len(scenarios)
@@ -338,7 +342,7 @@ for i, scenario in enumerate(scenarios):
 plt.tight_layout()
 plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(img_path, hist_name))
-
+'''
 #***************************************************************************
 #with QDM
 file_dict = {
@@ -359,7 +363,8 @@ for scenario, filename in file_dict.items():
     df["rho"] = df["sp"] / (r_spec * df["mx2t24"])
     
     # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis=1)
+    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, 
+                                               safe_margin_coef, mu, pathway_incl, dv=dv_step), axis=1)
     
     # Add a column for the scenario label
     df["Scenario"] = scenario
@@ -372,7 +377,9 @@ for scenario, filename in file_dict.items():
 df_all = pd.concat(all_data, ignore_index=True)
 
 #Save for future
-df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM.parquet"))
+df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet"))
+
+'''
 #Create the Boxplot
 sns.set_style("whitegrid")
 plt.figure(figsize=(8, 6))
@@ -391,5 +398,5 @@ plt.tight_layout()
 plt.savefig(os.path.join(img_path, img_name))
 
 print(f'Images saved in {img_path}')
-
+'''
 

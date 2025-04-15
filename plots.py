@@ -44,18 +44,27 @@ airport_length = config['Airport']['airport_lenght']
 climate_model = config['Climate']['model']
 climate_months = config['Climate']['months']
 
+dv_step = config['speed']
+
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
 
 cl_file_name = 'cl_TODR_data.parquet'
-QDM_file_name =  f"{airport_code}_TODR_QDM.parquet"
-NOQDM_file_name =  f"{airport_code}_TODR_NOQDM.parquet"
+QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet"
+NOQDM_file_name =  f"{airport_code}_TODR_NOQDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet"
 
 cl_data_path = os.path.join(output_path, cl_file_name)
 QDM_path = os.path.join(output_path, QDM_file_name)
 NOQDM_path = os.path.join(output_path, NOQDM_file_name)
 files = [QDM_path, NOQDM_path]
 os.makedirs(img_path, exist_ok=True)
+
+#plots settings
+n_bins_todr = 50
+n_bins_atm = 100
+
+temp_min = 300.0 #K lower bound for temp mask (100 --> no lower bound)
+temp_max = 350.0 #K upper bound for temp mask (700 --> no upper bound)
 '''
 #Define path
 airport_code = 'EBBR'
@@ -105,7 +114,7 @@ plt.savefig(img_out)
 
 for file, id in zip(files, ['QDM', 'NOQDM']):
     df_all = pd.read_parquet(file)
-    img_name = f'{airport_code}_{id}.pdf'
+    img_name = f'{airport_code}_{id}_dv_{str(dv_step).replace( '.' , '_' )}.pdf'
     img_out = os.path.join(img_path, img_name)
     #Create the Boxplot
     sns.set_style("whitegrid")
@@ -125,9 +134,8 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     plt.savefig(os.path.join(img_path, img_name))
 
     #---------------------------------------------------------------------------
-    n_bins = 30
     #TODR distr. hist
-    hist_name = f"{airport_code}__TODR_{id}_hist.pdf"
+    hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -139,7 +147,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     # Plot each scenario in a different panel
     for i, scenario in enumerate(scenarios):
         subset = df_all[df_all['Scenario'] == scenario]
-        axs[i].hist(subset['TODR'], bins=n_bins, color='skyblue', edgecolor='black')
+        axs[i].hist(subset['TODR'], bins=n_bins_todr, color='skyblue', edgecolor='black')
         axs[i].set_title(f"{scenario} Scenario")
         axs[i].set_xlabel("TODR")
         axs[i].set_ylabel("Frequency")
@@ -149,9 +157,9 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
     plt.savefig(os.path.join(img_path, hist_name))
 
-    n_bins = 50
+    
     #temp hist
-    hist_name = f"{airport_code}__temp_{id}_hist.pdf"
+    hist_name = f"{airport_code}_temp_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -163,7 +171,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     # Plot each scenario in a different panel
     for i, scenario in enumerate(scenarios):
         subset = df_all[df_all['Scenario'] == scenario]
-        axs[i].hist(subset['mx2t24'], bins=n_bins, color='skyblue', edgecolor='black')
+        axs[i].hist(subset['mx2t24'], bins=n_bins_atm, color='skyblue', edgecolor='black')
         axs[i].set_title(f"{scenario} Scenario")
         axs[i].set_xlabel("T [K]")
         axs[i].set_ylabel("Frequency")
@@ -175,7 +183,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
 
     #sur pres hist
-    hist_name = f"{airport_code}__sp_{id}_hist.pdf"
+    hist_name = f"{airport_code}_sp_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -187,7 +195,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     # Plot each scenario in a different panel
     for i, scenario in enumerate(scenarios):
         subset = df_all[df_all['Scenario'] == scenario]
-        axs[i].hist(subset['sp'], bins=n_bins, color='skyblue', edgecolor='black')
+        axs[i].hist(subset['sp'], bins=n_bins_atm, color='skyblue', edgecolor='black')
         axs[i].set_title(f"{scenario} Scenario")
         axs[i].set_xlabel("sp [Pa]")
         axs[i].set_ylabel("Frequency")
@@ -198,7 +206,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     plt.savefig(os.path.join(img_path, hist_name))
 
     #rho pres hist
-    hist_name = f"{airport_code}__rho_{id}_hist.pdf"
+    hist_name = f"{airport_code}_rho_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -210,7 +218,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     # Plot each scenario in a different panel
     for i, scenario in enumerate(scenarios):
         subset = df_all[df_all['Scenario'] == scenario]
-        axs[i].hist(subset['rho'], bins=n_bins, color='skyblue', edgecolor='black')
+        axs[i].hist(subset['rho'], bins=n_bins_atm, color='skyblue', edgecolor='black')
         axs[i].set_title(f"{scenario} Scenario")
         axs[i].set_xlabel("air density [kg m^-3]")
         axs[i].set_ylabel("Frequency")
@@ -221,3 +229,119 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     plt.savefig(os.path.join(img_path, hist_name))
 
 print(f'Images saved in {img_path}')
+
+#*********************************************************************
+#TODR and atm cond w/ temp bounds
+
+for file, id in zip(files, ['QDM', 'NOQDM']):
+    df_all = pd.read_parquet(file)
+    
+    #---------------------------------------------------------------------------
+    #TODR distr. hist
+    hist_name = f"{airport_code}_TODR_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    # Get the unique scenarios
+    scenarios = df_all['Scenario'].unique()
+    n_scenarios = len(scenarios)
+
+    # Create subplots
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+    axs = axs.flatten()  # To easily index with a single loop
+
+    # Plot each scenario in a different panel
+    for i, scenario in enumerate(scenarios):
+        subset = df_all[(df_all['Scenario'] == scenario) &
+                        (df_all['mx2t24'] > temp_min) &
+                        (df_all['mx2t24'] < temp_max)
+                        ]
+        axs[i].hist(subset['TODR'], bins=n_bins_todr, color='skyblue', edgecolor='black')
+        axs[i].set_title(f"{scenario} Scenario")
+        axs[i].set_xlabel("TODR")
+        axs[i].set_ylabel("Frequency")
+        axs[i].grid(True)
+
+    plt.tight_layout()
+    plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+    plt.savefig(os.path.join(img_path, hist_name))
+
+    
+    #temp hist
+    hist_name = f"{airport_code}_temp_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    # Get the unique scenarios
+    scenarios = df_all['Scenario'].unique()
+    n_scenarios = len(scenarios)
+
+    # Create subplots
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+    axs = axs.flatten()  # To easily index with a single loop
+
+    # Plot each scenario in a different panel
+    for i, scenario in enumerate(scenarios):
+        subset = df_all[(df_all['Scenario'] == scenario) &
+                        (df_all['mx2t24'] > temp_min) &
+                        (df_all['mx2t24'] < temp_max)
+                        ]
+        axs[i].hist(subset['mx2t24'], bins=n_bins_atm, color='skyblue', edgecolor='black')
+        axs[i].set_title(f"{scenario} Scenario")
+        axs[i].set_xlabel("T [K]")
+        axs[i].set_ylabel("Frequency")
+        axs[i].grid(True)
+
+    plt.tight_layout()
+    plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+    plt.savefig(os.path.join(img_path, hist_name))
+
+
+    #sur pres hist
+    hist_name = f"{airport_code}_sp_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    # Get the unique scenarios
+    scenarios = df_all['Scenario'].unique()
+    n_scenarios = len(scenarios)
+
+    # Create subplots
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+    axs = axs.flatten()  # To easily index with a single loop
+
+    # Plot each scenario in a different panel
+    for i, scenario in enumerate(scenarios):
+        subset = df_all[(df_all['Scenario'] == scenario) &
+                        (df_all['mx2t24'] > temp_min) &
+                        (df_all['mx2t24'] < temp_max)
+                        ]
+        axs[i].hist(subset['sp'], bins=n_bins_atm, color='skyblue', edgecolor='black')
+        axs[i].set_title(f"{scenario} Scenario")
+        axs[i].set_xlabel("sp [Pa]")
+        axs[i].set_ylabel("Frequency")
+        axs[i].grid(True)
+
+    plt.tight_layout()
+    plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+    plt.savefig(os.path.join(img_path, hist_name))
+
+    #rho pres hist
+    hist_name = f"{airport_code}_rho_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    # Get the unique scenarios
+    scenarios = df_all['Scenario'].unique()
+    n_scenarios = len(scenarios)
+
+    # Create subplots
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+    axs = axs.flatten()  # To easily index with a single loop
+
+    # Plot each scenario in a different panel
+    for i, scenario in enumerate(scenarios):
+        subset = df_all[(df_all['Scenario'] == scenario) &
+                        (df_all['mx2t24'] > temp_min) &
+                        (df_all['mx2t24'] < temp_max)
+                        ]
+        axs[i].hist(subset['rho'], bins=n_bins_atm, color='skyblue', edgecolor='black')
+        axs[i].set_title(f"{scenario} Scenario")
+        axs[i].set_xlabel("air density [kg m^-3]")
+        axs[i].set_ylabel("Frequency")
+        axs[i].grid(True)
+
+    plt.tight_layout()
+    plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+    plt.savefig(os.path.join(img_path, hist_name))
+
+print(f'Images saved in {img_path}')
+
