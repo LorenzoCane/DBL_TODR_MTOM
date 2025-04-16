@@ -39,4 +39,7 @@ Climate:
   model: 'ACCESS-ESM1-5'
   months: [ 6, 7, 8 ]
 
-speed: 0.1
+#Speed spec for Take-off distance calculation
+Speed:
+  v0: 0.25
+  decay: 'exp' #please select 'exp' or 'inv' or 'exp+' or 'const'

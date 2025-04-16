@@ -1,13 +1,15 @@
 
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+import git
 import yaml
 import warnings
 warnings.filterwarnings('ignore') #to exclude sns warning
 
-
+import files_manager_utils as fmu
 #***************************************************************************
 #import from configuration file config.yml
 config_file = 'config.yml'
@@ -44,14 +46,15 @@ airport_length = config['Airport']['airport_lenght']
 climate_model = config['Climate']['model']
 climate_months = config['Climate']['months']
 
-dv_step = config['speed']
+dv0 = config['Speed']['v0']
+dv_decay = config['Speed']['decay']
 
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
 
 cl_file_name = 'cl_TODR_data.parquet'
-QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet"
-NOQDM_file_name =  f"{airport_code}_TODR_NOQDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet"
+QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"
+NOQDM_file_name = f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"
 
 cl_data_path = os.path.join(output_path, cl_file_name)
 QDM_path = os.path.join(output_path, QDM_file_name)
@@ -60,11 +63,52 @@ files = [QDM_path, NOQDM_path]
 os.makedirs(img_path, exist_ok=True)
 
 #plots settings
-n_bins_todr = 50
+n_bins_todr = 30
 n_bins_atm = 100
 
 temp_min = 300.0 #K lower bound for temp mask (100 --> no lower bound)
 temp_max = 350.0 #K upper bound for temp mask (700 --> no upper bound)
+
+#*********************************************************************
+#creation of folder(s) with progressive names 
+#TO RESTART THE COUNTING: delete Flag_variable.npy file from results folder
+
+ #search for the current number of results
+f=os.path.join(img_path, 'Flag_variable.npy')
+try:
+    Flag_variable = np.load(os.path.join(img_path, 'Flag_variable.npy'))
+    Flag_variable = int(Flag_variable)
+    Flag_variable =Flag_variable+ 1
+    np.save(f,Flag_variable)
+
+except FileNotFoundError:
+    
+    np.save(f, 1)
+    Flag_variable=1
+#create a new folder    
+Newfolder= f'results_{str(Flag_variable)}_dv{dv0}_{dv_decay}'
+img_path = os.path.join(img_path, Newfolder)
+os.makedirs(img_path, exist_ok=True)
+
+print(f"New folder: {img_path} has been created")
+
+#copy config.yml file into the results 
+source_file = "config.yml"
+new_file_name = "config" + str(Flag_variable) + ".yml"
+fmu.copy_and_rename(source_file, img_path, new_file_name) #include files_manager_utils.py in your import
+#print current files version in the config file footer
+f = open(os.path.join(img_path,new_file_name), "a")
+f.write("\n\n#*************************************\n")
+f.write("#Last git commit:\n")
+repo = git.Repo("./")   
+tree = repo.tree()
+for blob in tree:
+    commit = next(repo.iter_commits(paths=blob.path, max_count=1))
+    version = "# " + str(blob.path) + " : " + str(commit.committed_date) + "\n"
+    f.write(version)
+
+f.close()
+#*********************************************************************
 '''
 #Define path
 airport_code = 'EBBR'
@@ -114,7 +158,7 @@ plt.savefig(img_out)
 
 for file, id in zip(files, ['QDM', 'NOQDM']):
     df_all = pd.read_parquet(file)
-    img_name = f'{airport_code}_{id}_dv_{str(dv_step).replace( '.' , '_' )}.pdf'
+    img_name = f'{airport_code}_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.pdf'
     img_out = os.path.join(img_path, img_name)
     #Create the Boxplot
     sns.set_style("whitegrid")
@@ -135,7 +179,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
     #---------------------------------------------------------------------------
     #TODR distr. hist
-    hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -159,7 +203,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
     
     #temp hist
-    hist_name = f"{airport_code}_temp_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_temp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -183,7 +227,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
 
     #sur pres hist
-    hist_name = f"{airport_code}_sp_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_sp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -206,7 +250,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     plt.savefig(os.path.join(img_path, hist_name))
 
     #rho pres hist
-    hist_name = f"{airport_code}_rho_{id}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_rho_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -238,7 +282,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     
     #---------------------------------------------------------------------------
     #TODR distr. hist
-    hist_name = f"{airport_code}_TODR_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_TODR_{id}_t_{temp_min}_{temp_max}__dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -265,7 +309,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
     
     #temp hist
-    hist_name = f"{airport_code}_temp_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_temp_{id}_t_{temp_min}_{temp_max}__dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -292,7 +336,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
 
     #sur pres hist
-    hist_name = f"{airport_code}_sp_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_sp_{id}_t_{temp_min}_{temp_max}__dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -318,7 +362,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     plt.savefig(os.path.join(img_path, hist_name))
 
     #rho pres hist
-    hist_name = f"{airport_code}_rho_{id}_t_{temp_min}_{temp_max}_dv_{str(dv_step).replace( '.' , '_' )}_hist.pdf"
+    hist_name = f"{airport_code}_rho_{id}_t_{temp_min}_{temp_max}__dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)

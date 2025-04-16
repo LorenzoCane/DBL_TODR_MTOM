@@ -7,7 +7,7 @@ from utils import rmsd
 
 
 def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
-             mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = 0.1):
+             mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv0 = 1.0, dv_decay = 'exp'):
     vel = 0.0  # m/s
     d = 0.0    # m
     
@@ -27,6 +27,18 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         #print(f'D = {D}')
         if L > weight * lift_frac:
             break
+
+        #dv decay selection
+        if dv_decay == 'exp': 
+            dv = dv0 * np.exp(-L/weight)
+        elif dv_decay == 'exp+':
+            dv = dv0 * np.exp(-5.0 * L/weight)           
+        elif dv_decay == 'inv':
+            dv = dv0 * (weight-L) / (L+1.0) 
+        elif dv_decay == 'const':
+            dv = dv0
+        else:
+            raise ValueError(f'dv decay type "{dv_decay}" not supported. Try "exp" or "inv" or "const".\nFor further implemention suggestions please contact developers')
 
         a_current = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
         
@@ -49,6 +61,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         v_mean = vel - (0.5 * dv)
         dx = v_mean * dv / a_mean
         d += dx
+        #print(dv)
         #print(f'v = {vel}, a = {a_mean}. d = {d}')
 
     final_distance = (d + airborne_d) * margin_coeff
@@ -58,9 +71,8 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
 
 def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa, 
                 cd_0, k_p, wing_area, airborne_dist, safe_margin_coeff, 
-                mu, theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01):
+                mu, dv0=0.5, dv_decay='const', theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01):
     
-    dv_val = 0.5
     fixed_params = dict(thrust=thr,
                         rho=rho_isa,
                         cd0=cd_0,
@@ -71,13 +83,15 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                         mu=mu,
                         theta=theta,
                         lift_frac=1.0, 
-                        return_velocity=False
+                        return_velocity=False,
+                        dv0= 0.5,
+                        dv_decay= dv_decay
                     )
     def take_off_wrapper(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
-                     margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = dv_val):
+                     margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = dv0):
         results =  np.array([take_off(i, thrust, rho, cl, cd0, k, w_area, airborne_d,
                     margin_coeff=margin_coeff, mu=mu, theta=theta,
-                    lift_frac=lift_frac, return_velocity=return_velocity, dv= dv) for i in m])
+                    lift_frac=lift_frac, return_velocity=return_velocity, dv0= dv, dv_decay='const') for i in m])
         return results
     
 
@@ -113,7 +127,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                theta=theta, 
                lift_frac=1.0, 
                return_velocity=False,
-               dv = dv_val
+               dv = dv0,
                )
     
     # Fix all parameters except cl.

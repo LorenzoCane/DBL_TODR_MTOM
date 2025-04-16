@@ -96,7 +96,8 @@ airport_alt_ft = conv.convert(airport_alt_m, 'm', 'ft')
 climate_model = config['Climate']['model']
 climate_months = config['Climate']['months']
 
-dv_step = config['speed']
+dv0 = config['Speed']['v0']
+dv_decay = config['Speed']['decay']
 
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
@@ -206,7 +207,7 @@ for scenario, filename in file_dict.items():
     
     # Compute TODR for each row using the same constant parameters
     df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, 
-                                               airborne_dist, safe_margin_coef, mu, pathway_incl, dv = dv_step), axis=1)
+                                               airborne_dist, safe_margin_coef, mu, pathway_incl, dv0=dv0, dv_decay=dv_decay), axis=1)
     
     # Add a column for the scenario label
     df["Scenario"] = scenario
@@ -223,7 +224,7 @@ print('-------------------------------------------------')
 
 
 #Save data for future plots and anal
-save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet")
+save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
 df_all.to_parquet(save_path)
 print(f'All processed data saved in {save_path}')
 print('-------------------------------------------------')
@@ -364,7 +365,7 @@ for scenario, filename in file_dict.items():
     
     # Compute TODR for each row using the same constant parameters
     df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, airborne_dist, 
-                                               safe_margin_coef, mu, pathway_incl, dv=dv_step), axis=1)
+                                               safe_margin_coef, mu, pathway_incl, dv0=dv0, dv_decay=dv_decay), axis=1)
     
     # Add a column for the scenario label
     df["Scenario"] = scenario
@@ -377,7 +378,7 @@ for scenario, filename in file_dict.items():
 df_all = pd.concat(all_data, ignore_index=True)
 
 #Save for future
-df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv_step).replace( '.' , '_' )}.parquet"))
+df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"))
 
 '''
 #Create the Boxplot

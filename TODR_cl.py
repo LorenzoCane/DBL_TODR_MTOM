@@ -97,6 +97,7 @@ airport_alt = config['Airport']['airport_alt']
 climate_model = config['Climate']['model']
 climate_months = config['Climate']['months']
 
+
 print(f'Configuration successfully loaded from {config_file}')
 
 '''
@@ -188,7 +189,7 @@ print('-------------------------------------------------')
 for thr in T:
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
                                thr, rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu = mu,
-                               theta = 0.0, cl_min=1.0, cl_max=2.01, cl_step=0.01)
+                               dv0=1.0, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.01, cl_step=0.01)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
