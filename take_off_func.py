@@ -12,20 +12,20 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
     d = 0.0    # m
     
     theta = conv.convert(theta, 'deg', 'rad')
-    cd = cd0 + k * cl**2
+    cd = cd0 + k * cl* cl
     weight = m * 9.81
    
     #print(f'weight = {weight} N')
     while True:
         # Current state
-        D = 0.5 * rho * vel**2 * w_area * cd
+        D = 0.5 * rho * vel* vel * w_area * cd
         
-        L = 0.5 * rho * vel**2 * w_area * cl
+        L = 0.5 * rho * vel* vel * w_area * cl
         #print ('init:')
         #print(f'V = {vel} m/s')
         #print(f'L = {L}')
         #print(f'D = {D}')
-        if L > weight * lift_frac:
+        if L >= weight * lift_frac:
             break
 
         #dv decay selection
@@ -105,7 +105,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
     #print(rmsd_values)
 
     best_cl_guess = cl_candidates[np.argmin(rmsd_values)]
-    print(f"Best candidate C_l from grid search: {best_cl_guess:.2f} "
+    print(f"Best candidate C_l from grid search: {best_cl_guess:.3f} "
           f"with RMSD = {min(rmsd_values):.2f}")
     
 

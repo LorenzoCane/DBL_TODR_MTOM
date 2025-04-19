@@ -63,7 +63,7 @@ files = [QDM_path, NOQDM_path]
 os.makedirs(img_path, exist_ok=True)
 
 #plots settings
-n_bins_todr = 30
+n_bins_todr = 50
 n_bins_atm = 100
 
 temp_min = 300.0 #K lower bound for temp mask (100 --> no lower bound)
@@ -193,7 +193,7 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
         subset = df_all[df_all['Scenario'] == scenario]
         axs[i].hist(subset['TODR'], bins=n_bins_todr, color='skyblue', edgecolor='black')
         axs[i].set_title(f"{scenario} Scenario")
-        axs[i].set_xlabel("TODR")
+        axs[i].set_xlabel("TODR [m]")
         axs[i].set_ylabel("Frequency")
         axs[i].grid(True)
 

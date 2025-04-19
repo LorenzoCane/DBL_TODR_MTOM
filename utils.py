@@ -70,7 +70,7 @@ def rmsd(model, x_data, y_data, **params):
     #print(predictions)
     #print(y_data)
     # Compute RMSD.
-    rmsd_value = np.array((np.mean((predictions - y_data) ** 2))**0.5)
+    rmsd_value = ((np.mean((predictions - y_data) ** 2))**0.5)
     #print(rmsd_value)
     
     return rmsd_value

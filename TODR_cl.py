@@ -55,6 +55,7 @@ import pyarrow.parquet as pq
 from openap import prop #aircraft and engine-related data
 from openap.kinematic import WRAP #set of kinematic models
 from openap.thrust import Thrust #thrust calc
+from openap.drag import Drag
 
 from pprint import pprint #“pretty-print” arbitrary Python data structures 
 
@@ -143,7 +144,7 @@ wing_area = aircraft['wing']['area'] #wing area
 cd0 = aircraft['drag']['cd0']
 k = aircraft['drag']['k']
 mu = aircraft['drag']['gears']
-#print(mu)
+print(cd0)
 
 #aircraft TO speeds
 wrap = WRAP(ac=aircraft_name) #kinematic parameters
@@ -178,7 +179,7 @@ if (len(aircraft_mass) != len(to_manuf_value)):
 
 '''
 #check     
-test = take_off(aircraft_mass[2], T[1], rho_isa, 1.14, cd0, k, wing_area, airborne_dist, mu= mu, return_velocity=True)
+test = take_off(aircraft_mass[2], T[1], rho_isa, 1.41, cd0, k, wing_area, airborne_dist, mu= mu, return_velocity=True)
 print(test)
 '''
 #***************************************************************************
@@ -189,7 +190,7 @@ print('-------------------------------------------------')
 for thr in T:
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
                                thr, rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu = mu,
-                               dv0=1.0, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.01, cl_step=0.01)
+                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.001, cl_step=0.001)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
@@ -289,3 +290,5 @@ plt.grid(True)
 plt.tight_layout()
 #plt.show()
 plt.savefig(os.path.join(img_path, "TODR_mass.pdf"))
+
+

@@ -121,7 +121,7 @@ else:
     cl_best = 1.61
     print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
     cl_best = 1.61
-#cl_best = 1.61
+cl_best = 1.41
 
 #airborne dist
 asc_m = conv.convert(asc_ft, 'ft', 'm') # m
