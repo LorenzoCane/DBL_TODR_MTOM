@@ -8,7 +8,7 @@ from openap.drag import Drag
 
 
 def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
-             mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv0 = 1.0, dv_decay = 'exp'):
+             mu=0., theta=0., lift_frac=1.0, v_to=74.5, vel_break = False, return_velocity=False, dv0 = 1.0, dv_decay = 'exp'):
     vel = 0.01  # m/s
     d = 0.0    # m
     
@@ -19,17 +19,19 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
     #print(f'weight = {weight} N')
     while True:
         # Current state
-        #D = 0.5 * rho * vel* vel * w_area * cd #parabolic "classic" drag
-        
+        D = 0.5 * rho * vel* vel * w_area * cd #parabolic "classic" drag
+        '''
         drag = Drag(ac='A320')
         D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) #OpenAP drag
-        
+        '''
         L = 0.5 * rho * vel* vel * w_area * cl
         #print ('init:')
         #print(f'V = {vel} m/s')
         #print(f'L = {L}')
         #print(f'D = {D}')
         if L >= weight * lift_frac:
+            break
+        if all([vel_break, vel > v_to]):
             break
 
         #dv decay selection
@@ -50,8 +52,8 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         vel += dv
 
         # Next state
-        #D = 0.5 * rho * (vel**2) * w_area * cd
-        D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) 
+        D = 0.5 * rho * (vel**2) * w_area * cd
+        #D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) 
 
         L = 0.5 * rho * (vel**2) * w_area * cl
         a_next = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
@@ -71,12 +73,13 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         #print(f'v = {vel}, a = {a_mean}. d = {d}')
 
     final_distance = (d + airborne_d) * margin_coeff
+    #print(f'Model take-off vel: {vel} m/s')
     return (final_distance, vel) if return_velocity else final_distance
 
 #-----------------------------------------------------------------------------------------------------
 
 def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa, 
-                cd_0, k_p, wing_area, airborne_dist, safe_margin_coeff, 
+                cd_0, k_p, wing_area, airborne_dist, safe_margin_coeff, v_takeoff, 
                 mu, dv0=0.5, dv_decay='const', theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01):
     
     fixed_params = dict(thrust=thr,
@@ -90,14 +93,16 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                         theta=theta,
                         lift_frac=1.0, 
                         return_velocity=False,
+                        vel_break = True,
                         dv0= 0.5,
+                        v_to = v_takeoff,
                         dv_decay= dv_decay
                     )
     def take_off_wrapper(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
                      margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = dv0):
-        results =  np.array([take_off(i, thrust, rho, cl, cd0, k, w_area, airborne_d,
+        results =  np.array([take_off(i, thrust, rho, cl, cd0, k, w_area, airborne_d, v_to= v_takeoff,
                     margin_coeff=margin_coeff, mu=mu, theta=theta,
-                    lift_frac=lift_frac, return_velocity=return_velocity, dv0= dv, dv_decay='const') for i in m])
+                    lift_frac=lift_frac, return_velocity=return_velocity, vel_break = True, dv0= dv, dv_decay='const') for i in m])
         return results
     
 

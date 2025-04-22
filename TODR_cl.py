@@ -154,12 +154,12 @@ opt_to_speed = to_speed['default'] #m/s
 min_to_speed = to_speed['minimum'] #m/s
 max_to_speed = to_speed['maximum'] #m/s
 speed_val = np.sort([s for s in list(to_speed.values())[:3]])
-#print(speed_val)
+print(speed_val)
 
 #aircraft thrust
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
 T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=0) for i in speed_val]) #N
-#print(T)
+print(T)
 
 rho_isa = isa_pr / (r_spec * isa_temp) 
 
@@ -187,14 +187,14 @@ print(test)
 cl_values = []
 cl_rsmd = []
 print('-------------------------------------------------')
-for thr in T:
+for i in range(0, len(T)):
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
-                               thr, rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu = mu,
-                               dv0=0.5, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.001, cl_step=0.001)
+                               T[i], rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, v_takeoff=speed_val[i], mu = mu,
+                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.001, cl_step=0.001)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
-
+print(cl_values)
 
 #final results
 cl_best = np.mean(cl_values)
@@ -206,7 +206,7 @@ print(f"C_l finding process results: C_l = {cl_best} +- {err_cl_best}")
 #Error analysis
 
 #model prediction and  gt - model perc diff
-model_to_dist = np.array([take_off(i, T[0], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu) for i in aircraft_mass])
+model_to_dist = np.array([take_off(i, T[1], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu) for i in aircraft_mass])
 perc_diff = (model_to_dist - to_manuf_value) / to_manuf_value * 100.0
 
 print('-------------------------------------------------')
@@ -266,7 +266,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, "cl_TODR_data_OPENAP_drag_nc.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet")
 pq.write_table(table, parquet_path)
 print(f"Data with metadata written to {parquet_path}")
 
@@ -289,6 +289,6 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 #plt.show()
-plt.savefig(os.path.join(img_path, "TODR_mass_OPENAP_Drag_nc.pdf"))
+plt.savefig(os.path.join(img_path, "TODR_mass_vel_break.pdf"))
 
 

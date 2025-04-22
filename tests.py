@@ -113,7 +113,7 @@ D_c = np.array([(0.5 * rho_isa * sp * sp * wing_area * (cd0 + k *cl_best * cl_be
 
 #print(cl)
 
-fig = plt.figure(figsize=(6,8))
+fig = plt.figure()
 ax = plt.subplot(211)
 ax2 = ax.twiny()
 ax.plot(speed_arr_m, D_c/1000, label= 'Parabolic drag model', linestyle = '--', color = 'orange')
