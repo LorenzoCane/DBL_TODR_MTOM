@@ -190,7 +190,7 @@ print('-------------------------------------------------')
 for thr in T:
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
                                thr, rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu = mu,
-                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.001, cl_step=0.001)
+                               dv0=0.5, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.001, cl_step=0.001)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
@@ -266,7 +266,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data_OPENAP_drag_nc.parquet")
 pq.write_table(table, parquet_path)
 print(f"Data with metadata written to {parquet_path}")
 
@@ -289,6 +289,6 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 #plt.show()
-plt.savefig(os.path.join(img_path, "TODR_mass.pdf"))
+plt.savefig(os.path.join(img_path, "TODR_mass_OPENAP_Drag_nc.pdf"))
 
 

@@ -4,11 +4,12 @@ from iminuit import Minuit
 from iminuit.cost import LeastSquares
 from utils import ComplexUnitConverter as conv
 from utils import rmsd
+from openap.drag import Drag
 
 
 def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
              mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv0 = 1.0, dv_decay = 'exp'):
-    vel = 0.0  # m/s
+    vel = 0.01  # m/s
     d = 0.0    # m
     
     theta = conv.convert(theta, 'deg', 'rad')
@@ -18,7 +19,10 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
     #print(f'weight = {weight} N')
     while True:
         # Current state
-        D = 0.5 * rho * vel* vel * w_area * cd
+        #D = 0.5 * rho * vel* vel * w_area * cd #parabolic "classic" drag
+        
+        drag = Drag(ac='A320')
+        D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) #OpenAP drag
         
         L = 0.5 * rho * vel* vel * w_area * cl
         #print ('init:')
@@ -46,14 +50,16 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         vel += dv
 
         # Next state
-        D = 0.5 * rho * (vel**2) * w_area * cd
+        #D = 0.5 * rho * (vel**2) * w_area * cd
+        D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) 
+
         L = 0.5 * rho * (vel**2) * w_area * cl
         a_next = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
         #print ('end:')
         #print(f'V = {vel} m/s')
         #print(f'L = {L}')
         #print(f'D = {D}')
-        if  a_current <0.0 : print('stupid')
+        #if  a_current <0.0 : print('stupid')
         a_mean = 0.5 * (a_next + a_current)
         if a_mean <= 0.0:
             break  # Prevent division by zero or deceleration

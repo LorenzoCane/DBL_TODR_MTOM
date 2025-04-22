@@ -91,14 +91,14 @@ rho_isa = isa_pr / (r_spec * isa_temp)
 
 cl_best = 1.61
 
-speed_arr_m = np.arange(40.0, 105.0, 5.0 )
+speed_arr_m = np.arange(30.0, 105.0, 2.0 )
 speed_arr_m = np.sort(np.append(speed_arr_m, speed_val))
 print(sep)
 print('Velocities:')
 print(speed_arr_m)
-speed_arr_kts = [conv.convert(sp, 'ms', 'kts') for sp in speed_arr_m]
-speed = 85.3 #m/s
-
+speed_arr_kts = np.array([conv.convert(sp, 'ms', 'kts') for sp in speed_arr_m])
+#speed = 85.3 #m/s
+print(speed_arr_kts)
 drag = Drag(ac=aircraft_name)
 
 # non- clean configuration
