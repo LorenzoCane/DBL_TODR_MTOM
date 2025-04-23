@@ -31,7 +31,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         #print(f'D = {D}')
         if L >= weight * lift_frac:
             break
-        if all([vel_break, vel > v_to]):
+        if all([vel_break, vel >= v_to]):
             break
 
         #dv decay selection

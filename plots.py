@@ -51,10 +51,15 @@ dv_decay = config['Speed']['decay']
 
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
-
+'''
 cl_file_name = 'cl_TODR_data.parquet'
 QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"
 NOQDM_file_name = f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"
+'''
+cl_file_name = 'cl_TODR_data_vel_break.parquet'
+QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet"
+NOQDM_file_name = f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet"
+
 
 cl_data_path = os.path.join(output_path, cl_file_name)
 QDM_path = os.path.join(output_path, QDM_file_name)
@@ -130,7 +135,7 @@ img_path = './images/'
 #*********************************************************************
 #C_l finder plots
 df = pd.read_parquet(cl_data_path)
-img_out = os.path.join(img_path, 'TODR_mass.pdf')
+img_out = os.path.join(img_path, 'TODR_mass_vel_break.pdf')
 
 plt.figure()
 
@@ -158,7 +163,9 @@ plt.savefig(img_out)
 
 for file, id in zip(files, ['QDM', 'NOQDM']):
     df_all = pd.read_parquet(file)
-    img_name = f'{airport_code}_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.pdf'
+    #img_name = f'{airport_code}_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.pdf'
+
+    img_name = f'{airport_code}_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.pdf'
     img_out = os.path.join(img_path, img_name)
     #Create the Boxplot
     sns.set_style("whitegrid")
@@ -179,7 +186,10 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
     #---------------------------------------------------------------------------
     #TODR distr. hist
-    hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    #hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+
+    hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_v_br.pdf"
+
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -203,7 +213,10 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
     
     #temp hist
-    hist_name = f"{airport_code}_temp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    #hist_name = f"{airport_code}_temp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+
+    hist_name = f"{airport_code}_temp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_vel_break.pdf"
+
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -227,7 +240,9 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
 
     #sur pres hist
-    hist_name = f"{airport_code}_sp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    #hist_name = f"{airport_code}_sp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    hist_name = f"{airport_code}_sp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_vel_break.pdf"
+
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -250,7 +265,9 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
     plt.savefig(os.path.join(img_path, hist_name))
 
     #rho pres hist
-    hist_name = f"{airport_code}_rho_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    #hist_name = f"{airport_code}_rho_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    hist_name = f"{airport_code}_rho_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_vel_break.pdf"
+
     # Get the unique scenarios
     scenarios = df_all['Scenario'].unique()
     n_scenarios = len(scenarios)
@@ -274,6 +291,8 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
 print(f'Images saved in {img_path}')
 
+
+'''
 #*********************************************************************
 #TODR and atm cond w/ temp bounds
 
@@ -389,3 +408,4 @@ for file, id in zip(files, ['QDM', 'NOQDM']):
 
 print(f'Images saved in {img_path}')
 
+'''

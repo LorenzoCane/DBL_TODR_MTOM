@@ -105,8 +105,9 @@ print('-------------------------------------------------')
 #ensure path existance
 os.makedirs(img_path, exist_ok=True)
 os.makedirs(output_path, exist_ok=True)
-# Load the Parquet file
-parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+# Load the Parquet file (choose the right one)
+#parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet") #vel break
 table = pq.read_table(parquet_path)
 # Extract and decode metadata
 metadata = table.schema.metadata
@@ -224,7 +225,10 @@ print('-------------------------------------------------')
 
 
 #Save data for future plots and anal
-save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
+#save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
+
+save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet")
+
 df_all.to_parquet(save_path)
 print(f'All processed data saved in {save_path}')
 print('-------------------------------------------------')
@@ -378,7 +382,9 @@ for scenario, filename in file_dict.items():
 df_all = pd.concat(all_data, ignore_index=True)
 
 #Save for future
-df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"))
+#df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"))
+
+df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet"))
 
 '''
 #Create the Boxplot
