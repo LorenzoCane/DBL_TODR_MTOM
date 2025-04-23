@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import yaml
 import time
+from datetime import timedelta
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -17,7 +18,7 @@ from pprint import pprint #“pretty-print” arbitrary Python data structures
 
 from utils import ComplexUnitConverter as conv
 from utils import rmsd
-from take_off_func import take_off, cl_finder
+from take_off_func import take_off, cl_finder, mtom, mtom_binary
 
 #***************************************************************************
 #import from configuration file config.yml
@@ -91,7 +92,7 @@ rho_isa = isa_pr / (r_spec * isa_temp)
 
 cl_best = 1.61
 
-speed_arr_m = np.arange(30.0, 105.0, 2.0 )
+speed_arr_m = np.arange(30.0, 205.0, 2.0 )
 speed_arr_m = np.sort(np.append(speed_arr_m, speed_val))
 print(sep)
 print('Velocities:')
@@ -99,6 +100,9 @@ print(speed_arr_m)
 speed_arr_kts = np.array([conv.convert(sp, 'ms', 'kts') for sp in speed_arr_m])
 #speed = 85.3 #m/s
 print(speed_arr_kts)
+
+#*************************************************************************************************
+#Drag test
 drag = Drag(ac=aircraft_name)
 
 # non- clean configuration
@@ -122,7 +126,7 @@ ax2.plot(speed_arr_kts, D_opap_nc/1000, label='Non-clean config (OPAP)', linesty
 ax.set_xlabel('V [m/s]')
 ax2.set_xlabel('V [kts]')
 ax.set_ylabel('Drag Force [kN]')
-ax.set_title(f'Drag vs. V - C_L = {cl_best}')
+ax.set_title(f'Drag vs. speed - C_L = {cl_best}')
 ax.set_ylim(10, 250)
 
 for sp in speed_val:
@@ -134,4 +138,205 @@ fig.tight_layout()
 drag_img_path = os.path.join(img_path, f'Drag_V_cl_{str.replace(str(cl_best),'.','_')}.pdf')
 fig.savefig(drag_img_path)
 print(sep)
-print(f'Image Drag vs. V saved in : {drag_img_path}')
+print(f'Image Drag vs. Speed saved in : {drag_img_path}')
+
+#*************************************************************************************************
+#Thrust Test
+thr = np.array([thr_a320.takeoff(tas = sp, alt=0) for sp in speed_arr_kts]) #N
+
+fig2 = plt.figure()
+ax3 = plt.subplot(211)
+ax4 = ax3.twiny()
+ax3.plot(speed_arr_m, thr/1000.0, label= 'Thrust (OpenAP)', linestyle = '--', color = 'blue')
+ax4.plot(speed_arr_kts, thr/1000.0, linestyle='--', color = 'blue')
+ax3.set_xlabel('V [m/s]')
+ax4.set_xlabel('V [kts]')
+ax3.set_ylabel('Thrust [kN]')
+ax3.set_title(f'Thrust vs. speed - C_L = {cl_best}')
+ax3.set_ylim(10, 250)
+
+for sp in speed_val:
+    ax3.axvline(x=sp, color = 'red', linestyle='-', linewidth=1.5)
+
+ax3.legend()
+fig2.tight_layout()
+thr_img_path = os.path.join(img_path, f'Thrust_V_cl_{str.replace(str(cl_best),'.','_')}.pdf')
+fig2.savefig(thr_img_path)
+print(sep)
+print(f'Image Thrust vs. Speed saved in : {thr_img_path}')
+
+
+#*************************************************************************************************
+#Take-off func test
+vel_arr, d_arr, L_arr, D_arr, T_arr, acc_arr, friction_arr, weight_comp_arr = ([] for _ in range(8))
+
+def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
+             mu=0., theta=0., lift_frac=1.0, v_to=74.5, vel_break = False, return_velocity=False, dv0 = 0.01, dv_decay = 'const'):
+    vel = 0.01  # m/s
+    d = 0.0    # m
+    
+    theta = conv.convert(theta, 'deg', 'rad')
+    cd = cd0 + k * cl* cl
+    weight = m * 9.81
+   
+    #print(f'weight = {weight} N')
+    while True:
+        # Current state
+        D = 0.5 * rho * vel* vel * w_area * cd #parabolic "classic" drag
+        '''
+        drag = Drag(ac='A320')
+        D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) #OpenAP drag
+        '''
+        L = 0.5 * rho * vel* vel * w_area * cl
+        #print ('init:')
+        #print(f'V = {vel} m/s')
+        #print(f'L = {L}')
+        #print(f'D = {D}')
+        
+        if L >= weight * lift_frac:
+            break
+        if all([vel_break, vel >= v_to]):
+            break
+
+        #dv decay selection
+        if dv_decay == 'exp': 
+            dv = dv0 * np.exp(-L/weight)
+        elif dv_decay == 'exp+':
+            dv = dv0 * np.exp(-5.0 * L/weight)           
+        elif dv_decay == 'inv':
+            dv = dv0 * (weight-L) / (L+1.0) 
+        elif dv_decay == 'const':
+            dv = dv0
+        else:
+            raise ValueError(f'dv decay type "{dv_decay}" not supported. Try "exp" or "inv" or "const".\nFor further implemention suggestions please contact developers')
+
+        a_current = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
+
+        # Advance velocity
+        vel += dv
+
+        # Next state
+        D = 0.5 * rho * (vel**2) * w_area * cd
+        #D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) 
+
+        L = 0.5 * rho * (vel**2) * w_area * cl
+
+        a_next = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
+        #print ('end:')
+        #print(f'V = {vel} m/s')
+        #print(f'L = {L}')
+        #print(f'D = {D}')
+        #if  a_current <0.0 : print('stupid')
+        a_mean = 0.5 * (a_next + a_current)
+        if a_mean <= 0.0:
+            break  # Prevent division by zero or deceleration
+
+        v_mean = vel - (0.5 * dv)
+        dx = v_mean * dv / a_mean
+        d += dx
+        #print(dv)
+        #print(f'v = {vel}, a = {a_mean}. d = {d}')
+        vel_arr.append(vel)
+        d_arr.append(d)
+        L_arr.append(L)
+        D_arr.append(D)
+        T_arr.append(thrust)
+        acc_arr.append(a_current)
+        friction_arr.append(mu * (weight * np.cos(theta) - L))
+        weight_comp_arr.append(weight)
+
+    final_distance = (d + airborne_d) * margin_coeff
+    #print(f'Model take-off vel: {vel} m/s')
+    return (final_distance, vel) if return_velocity else final_distance
+
+
+_ = take_off(m=aircraft_mass, thrust=T[1], rho=rho_isa, cl=cl_best, cd0=cd0, k=k, w_area=wing_area, 
+             airborne_d=airborne_dist, vel_break=False)
+
+import numpy as np
+
+vel_arr = np.array(vel_arr)
+d_arr = np.array(d_arr)
+L_arr = np.array(L_arr)
+D_arr = np.array(D_arr)
+T_arr = np.array(T_arr)
+acc_arr = np.array(acc_arr)
+friction_arr = np.array(friction_arr)
+weight_comp_arr = np.array(weight_comp_arr)
+
+# Horizontal forces
+fig3= plt.figure(figsize=(10, 6))
+ax5 = plt.subplot()
+ax6 = ax5.twiny()
+ax5.plot(vel_arr, T_arr/1000.0, label='Thrust')
+ax6.plot(d_arr, T_arr/1000.0)
+ax5.plot(vel_arr, D_arr/1000.0, label='Drag')
+ax5.plot(vel_arr, friction_arr/1000.0, label='Friction')
+ax5.set_xlabel('V [m/s]')
+ax6.set_xlabel('Distance [m]')
+ax5.set_ylabel('Horizontal Forces [kN]')
+ax5.set_title('Horizontal Forces')
+ax5.legend()
+#plt.grid(True)
+fig3.tight_layout()
+save_path = os.path.join(img_path, f'Horiz_forces_{str.replace(str(cl_best),'.','_')}.pdf')
+fig3.savefig(save_path)
+
+# Vertical forces
+fig4= plt.figure(figsize=(10, 6))
+ax7 =  plt.subplot()
+ax8 = ax7.twiny()
+ax7.plot(vel_arr, L_arr/1000.0, label='Lift')
+ax7.plot(vel_arr, weight_comp_arr/1000.0, label='Weight')
+ax8.plot(d_arr, L_arr/1000.0, alpha=0)
+ax7.set_xlabel('V [m/s]')
+ax8.set_xlabel('Distance [m]')
+ax7.set_ylabel('Vertical Forces [kN]')
+ax7.set_title('Vertical Forces')
+ax7.legend()
+#plt.grid(True)
+fig4.tight_layout()
+save_path = os.path.join(img_path, f'Vert_forces_{str.replace(str(cl_best),'.','_')}.pdf')
+fig4.savefig(save_path)
+
+# Acceleration vs speed
+fig5 = plt.figure(figsize=(10, 6))
+ax9 = plt.subplot()
+ax9.plot(vel_arr, acc_arr)
+ax9.set_xlabel('V [m/s]')
+ax9.set_ylabel('Acceleration [m/s^2]')
+ax9.set_title('Acceleration vs Velocity')
+#plt.grid(True)
+fig5.tight_layout()
+save_path = os.path.join(img_path, f'acc_vel_{str.replace(str(cl_best),'.','_')}.pdf')
+fig5.savefig(save_path)
+
+#*************************************************************************************************
+#MTOM calc w/ limited runway lenght
+print('===========================================\nMTOM Calculation')
+test_runway = np.linspace(1500.0, 2100.0, 13) #m
+isa_rho = isa_pr / (r_spec * isa_temp)
+print(f'Fixed TODR: {test_runway} m')
+
+#Williams et al. code
+start_time = time.monotonic()
+mtom_cl = [mtom(lenght, aircraft_mass, T[0], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
+            safe_margin_coef, mu, pathway_incl) for lenght in test_runway]
+end_time = time.monotonic()
+classic_time = timedelta(seconds = end_time - start_time).total_seconds()
+
+#Binary search
+start_time = time.monotonic()
+mtom_bin = [mtom_binary(lenght, aircraft_mass, T[0], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
+            safe_margin_coef, mu, pathway_incl, min_mass=50000, tol=1) for lenght in test_runway]
+end_time = time.monotonic()
+bin_time = timedelta(seconds = end_time - start_time).total_seconds()
+
+print('MTOM calc. results')
+for i in range(0,len(test_runway)):
+    print(f'TODR[m] = {test_runway[i]}, MTOM_class[kg] = {mtom_cl[i]}, MTOM_bin[kg] = {mtom_bin[i]:.0f}')
+
+print('Computational time:')
+print(f'Classic method: {classic_time} s')
+print(f'Binary method: {bin_time} s')
+
