@@ -93,7 +93,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                         theta=theta,
                         lift_frac=1.0, 
                         return_velocity=False,
-                        vel_break = True,
+                        vel_break = False,
                         dv0= 0.5,
                         v_to = v_takeoff,
                         dv_decay= dv_decay
@@ -102,7 +102,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                      margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = dv0):
         results =  np.array([take_off(i, thrust, rho, cl, cd0, k, w_area, airborne_d, v_to= v_takeoff,
                     margin_coeff=margin_coeff, mu=mu, theta=theta,
-                    lift_frac=lift_frac, return_velocity=return_velocity, vel_break = True, dv0= dv, dv_decay='const') for i in m])
+                    lift_frac=lift_frac, return_velocity=return_velocity, vel_break = False, dv0= dv, dv_decay='const') for i in m])
         return results
     
 

@@ -106,8 +106,8 @@ print('-------------------------------------------------')
 os.makedirs(img_path, exist_ok=True)
 os.makedirs(output_path, exist_ok=True)
 # Load the Parquet file (choose the right one)
-#parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
-parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet") #vel break
+parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+#parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet") #vel break
 table = pq.read_table(parquet_path)
 # Extract and decode metadata
 metadata = table.schema.metadata
@@ -225,9 +225,9 @@ print('-------------------------------------------------')
 
 
 #Save data for future plots and anal
-#save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
+save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
 
-save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet")
+#save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet")
 
 df_all.to_parquet(save_path)
 print(f'All processed data saved in {save_path}')
@@ -348,6 +348,8 @@ plt.tight_layout()
 plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(img_path, hist_name))
 '''
+
+'''
 #***************************************************************************
 #with QDM
 file_dict = {
@@ -385,8 +387,9 @@ df_all = pd.concat(all_data, ignore_index=True)
 #df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"))
 
 df_all.to_parquet(os.path.join(output_path, f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet"))
-
 '''
+'''
+
 #Create the Boxplot
 sns.set_style("whitegrid")
 plt.figure(figsize=(8, 6))

@@ -43,3 +43,22 @@ Climate:
 Speed:
   v0: 0.01
   decay: 'const' #please select 'exp' or 'inv' or 'exp+' or 'const'
+
+
+#*************************************
+#Last git commit:
+# .gitignore : 1744376696
+# MTOM.py : 1744640032
+# README.md : 1744356544
+# TODR_cl.py : 1745327240
+# TODR_climate_an.py : 1745396850
+# atm_cond_import.py : 1744724775
+# config.yml : 1745065656
+# files_manager_utils.py : 1744794607
+# images : 1745396850
+# output_data : 1745396850
+# plots.py : 1745395646
+# requirements.txt : 1745065656
+# take_off_func.py : 1745395646
+# tests.py : 1745327240
+# utils.py : 1745065656
