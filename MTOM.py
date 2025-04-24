@@ -60,6 +60,9 @@ airport_alt_ft = conv.convert(airport_alt_m, 'm', 'ft')
 climate_model = config['Climate']['model']
 climate_months = config['Climate']['months']
 
+dv0 = config['Speed']['v0']
+dv_decay = config['Speed']['decay']
+
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
 
@@ -81,7 +84,6 @@ if metadata:
 else:
     cl_best = 1.61
     print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
-    cl_best = 1.61
 #cl_best = 1.61
 
 #airborne dist
@@ -115,30 +117,3 @@ T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=airport_a
 
 
 #***************************************************************************
-#MTOM calc w/ limited runway lenght
-print('===========================================\nMTOM Calculation')
-test_runway = np.linspace(1500.0, 2100.0, 13) #m
-isa_rho = isa_pr / (r_spec * isa_temp)
-print(f'Fixed TODR: {test_runway} m')
-
-#Williams et al. code
-start_time = time.monotonic()
-mtom_cl = [mtom(lenght, aircraft_mass, T[0], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
-            safe_margin_coef, mu, pathway_incl) for lenght in test_runway]
-end_time = time.monotonic()
-classic_time = timedelta(seconds = end_time - start_time).total_seconds()
-
-#Binary search
-start_time = time.monotonic()
-mtom_bin = [mtom_binary(lenght, aircraft_mass, T[0], isa_rho, cl_best, cd0, k , wing_area, airborne_dist,
-            safe_margin_coef, mu, pathway_incl, min_mass=50000, tol=1) for lenght in test_runway]
-end_time = time.monotonic()
-bin_time = timedelta(seconds = end_time - start_time).total_seconds()
-
-print('MTOM calc. results')
-for i in range(0,len(test_runway)):
-    print(f'TODR[m] = {test_runway[i]}, MTOM_class[kg] = {mtom_cl[i]}, MTOM_bin[kg] = {mtom_bin[i]:.0f}')
-
-print('Computational time:')
-print(f'Classic method: {classic_time} s')
-print(f'Binary method: {bin_time} s')

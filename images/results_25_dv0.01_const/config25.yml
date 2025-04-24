@@ -47,3 +47,22 @@ Speed:
 #Mass limitation:
 Mass:
   passenger_mass: 86.0 #kg
+
+
+#*************************************
+#Last git commit:
+# .gitignore : 1744376696
+# MTOM.py : 1744640032
+# README.md : 1744356544
+# TODR_cl.py : 1745402175
+# TODR_climate_an.py : 1745402175
+# atm_cond_import.py : 1744724775
+# config.yml : 1745419088
+# files_manager_utils.py : 1744794607
+# images : 1745419088
+# output_data : 1745419088
+# plots.py : 1745402175
+# requirements.txt : 1745065656
+# take_off_func.py : 1745402175
+# tests.py : 1745419088
+# utils.py : 1745065656

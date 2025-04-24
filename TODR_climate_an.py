@@ -99,6 +99,8 @@ climate_months = config['Climate']['months']
 dv0 = config['Speed']['v0']
 dv_decay = config['Speed']['decay']
 
+passenger_mass = config['Mass']['passenger_mass']
+
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
 
@@ -210,6 +212,14 @@ for scenario, filename in file_dict.items():
     df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, 
                                                airborne_dist, safe_margin_coef, mu, pathway_incl, dv0=dv0, dv_decay=dv_decay), axis=1)
     
+    # Compute MTOM for each row
+    df["MTOM"] = df.apply(lambda row: mtom_binary(airport_length, aircraft_mass, T[1], row["rho"], cl_best, cd0, k,
+                                                  wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis = 1)
+    
+    # Compute mass reduction in kg and n. of passenger
+    df["mass_restr_kg"] = df["MTOM"] - aircraft_mass #kg Negative numbers
+    print(df['mass_restr_kg'])
+    df["mass_restr_pass"] = df['mass_restr_kg'] // passenger_mass #being neg counts one more "cancelled passanger" (conservative way)
     # Add a column for the scenario label
     df["Scenario"] = scenario
     
