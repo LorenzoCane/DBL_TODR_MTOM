@@ -251,9 +251,8 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
 
 
 _ = take_off(m=aircraft_mass, thrust=T[1], rho=rho_isa, cl=cl_best, cd0=cd0, k=k, w_area=wing_area, 
-             airborne_d=airborne_dist, vel_break=False)
+             airborne_d=airborne_dist, vel_break=False, v_to=speed_val[1])
 
-import numpy as np
 
 vel_arr = np.array(vel_arr)
 d_arr = np.array(d_arr)
