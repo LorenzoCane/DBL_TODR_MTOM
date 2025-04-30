@@ -162,7 +162,7 @@ T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=0) for i 
 #print(T)
 
 rho_isa = isa_pr / (r_spec * isa_temp) 
-
+#print(rho_isa)
 #***************************************************************************
 # check TO distance calculation method (toy conditions)
 
@@ -186,15 +186,16 @@ print(test)
 #Find best C_l values for min, opt and max take-off velocities
 cl_values = []
 cl_rsmd = []
+
 print('-------------------------------------------------')
 for i in range(0, len(T)):
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
                                T[i], rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, v_takeoff=speed_val[i], mu = mu,
-                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.001, cl_step=0.001)
+                               dv0=0.5, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.001)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
-print(cl_values)
+print(np.min(cl_values))
 
 #final results
 cl_best = np.mean(cl_values)
@@ -206,7 +207,7 @@ print(f"C_l finding process results: C_l = {cl_best} +- {err_cl_best}")
 #Error analysis
 
 #model prediction and  gt - model perc diff
-model_to_dist = np.array([take_off(i, T[1], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu) for i in aircraft_mass])
+model_to_dist = np.array([take_off(i, T[1], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu=mu) for i in aircraft_mass])
 perc_diff = (model_to_dist - to_manuf_value) / to_manuf_value * 100.0
 
 print('-------------------------------------------------')
@@ -223,6 +224,9 @@ model_lower = np.array([
     take_off(m, T[1], rho_isa, np.max(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
     for m in aircraft_mass
 ])
+print(model_lower)
+print(model_to_dist)
+print(model_upper)
 
 #Compute errors
 model_err_upper = abs(model_upper - model_to_dist)
@@ -266,7 +270,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data_nodrag.parquet")
 
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet")
 
@@ -279,7 +283,7 @@ plt.figure()
 
 # Model with asymmetric error bars
 plt.errorbar(aircraft_mass/1000., model_to_dist, 
-             yerr=[model_err_upper, model_err_lower],linestyle='',
+             yerr=[model_err_lower, model_err_upper],linestyle='',
              fmt='', capsize=4, label='Model data')
 
 # Manufacturer data with symmetric error bars
@@ -292,6 +296,6 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 #plt.show()
-plt.savefig(os.path.join(img_path, "TODR_mass.pdf"))
+plt.savefig(os.path.join(img_path, "TODR_mass_nodrag.pdf"))
 
 #plt.savefig(os.path.join(img_path, "TODR_mass_vel_break.pdf"))

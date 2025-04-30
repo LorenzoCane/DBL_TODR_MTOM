@@ -9,7 +9,7 @@ Dir:
 
 #Constants
 Constants:
-  r_spec: 287.05
+  r_spec: 287.0
   pathway_incl: 0.0
   asc: 35.0 #ft
   climb_angle: 7.7
@@ -48,3 +48,22 @@ Speed:
 Mass:
   passenger_mass: 86.0 #kg
   period: 'Year' #Month Year Day
+
+
+#*************************************
+#Last git commit:
+# .gitignore : 1744376696
+# MTOM.py : 1745486743
+# README.md : 1744356544
+# TODR_cl.py : 1745402175
+# TODR_climate_an.py : 1745486743
+# atm_cond_import.py : 1744724775
+# config.yml : 1745486743
+# files_manager_utils.py : 1744794607
+# images : 1745490172
+# output_data : 1745486743
+# plots.py : 1745486743
+# requirements.txt : 1745065656
+# take_off_func.py : 1745402175
+# tests.py : 1745490172
+# utils.py : 1745065656

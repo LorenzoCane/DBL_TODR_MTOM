@@ -50,6 +50,7 @@ dv0 = config['Speed']['v0']
 dv_decay = config['Speed']['decay']
 
 passenger_mass = config['Mass']['passenger_mass']
+mass_restr_period = config['Mass']['period']
 
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
@@ -300,8 +301,8 @@ print(f'Images saved in {img_path}')
 #*********************************************************************
 #MTOM and mass restriction plots
 df_all = pd.read_parquet(file)
-#Compute yearly means for plot
-yearly_m_restr = (df_all.groupby(['Scenario', 'Year'])[['mass_restr_kg', 'mass_restr_pass']]
+#Compute period means for plot
+period_m_restr = (df_all.groupby(['Scenario', mass_restr_period])[['mass_restr_kg', 'mass_restr_pass']]
                   .mean().reset_index()
                   )
 mass_restr_scenarios = ["Historical", "SSP126", "SSP370", "SSP585"] #include 'Historical' if needed
@@ -309,7 +310,7 @@ mass_restr_scenarios = ["Historical", "SSP126", "SSP370", "SSP585"] #include 'Hi
 fig, axes = plt.subplots(nrows=len(mass_restr_scenarios), ncols=1)
 
 for ax, scenario in zip(axes, mass_restr_scenarios):
-    df_s = yearly_m_restr[yearly_m_restr['Scenario'] == scenario]
+    df_s = period_m_restr[period_m_restr['Scenario'] == scenario]
 
     # Left axis: mass_restr_kg
     ln1 = ax.plot(df_s['Year'], df_s['mass_restr_kg'], linestyle='--',
@@ -320,13 +321,15 @@ for ax, scenario in zip(axes, mass_restr_scenarios):
     ax2 = ax.twinx()
     ln2 = ax2.plot(df_s['Year'], df_s['mass_restr_pass'], linestyle='-',
         label='Passenger Restriction [#]')
-
+    
+    ax2.set_ylim(-126,-101)
+    ax.set_ylim(-126 * passenger_mass, -101 * passenger_mass)
     ax.set_title(f"{scenario} Scenario")
 
 # Common labels
-fig.text(0.5, 0.04, 'Year', ha='center')
-fig.text(0.04, 0.5, 'Mass restriction [kg]', va='center', rotation='vertical')
-fig.text(0.96, 0.5, 'Passenger Restriction [#]', va='center', rotation='vertical')
+fig.text(0.5, 0.02, 'Year', ha='center')
+fig.text(0.02, 0.5, 'Mass restriction [kg]', va='center', rotation='vertical')
+fig.text(0.98, 0.5, 'Passenger Restriction [#]', va='center', rotation='vertical')
 plt.tight_layout()
 
 mtom_img_name = f'{airport_code}_MTOM_restr_pass_m{passenger_mass}.pdf'
@@ -335,14 +338,14 @@ plt.savefig(os.path.join(img_path, mtom_img_name))
 #-----------------------------------------------------------------------------------------
 #Hist vs. scenarios comparison
 # Compute the Historical‐scenario overall means
-hist = yearly_m_restr[yearly_m_restr['Scenario'] == 'Historical']
+hist = period_m_restr[period_m_restr['Scenario'] == 'Historical']
 hist_mean_kg   = hist['mass_restr_kg'].mean()
 hist_mean_pass = hist['mass_restr_pass'].mean()
 
 
 # Build a pivot of the SSP scenarios
 ssp_scenarios = ['SSP126','SSP370','SSP585']
-pivot = yearly_m_restr.pivot(index='Year', columns='Scenario', values=['mass_restr_kg','mass_restr_pass'])
+pivot = period_m_restr.pivot(index='Year', columns='Scenario', values=['mass_restr_kg','mass_restr_pass'])
 
 # Subtract the historical‐mean constant
 diff_kg   = pivot['mass_restr_kg'][ssp_scenarios]   - hist_mean_kg
@@ -363,10 +366,11 @@ for ax, scen in zip(axes, ssp_scenarios):
     ax2 = ax.twinx()
     ln2 = ax2.plot(diff_pass.index, diff_pass[scen], linestyle='-',
         label='Δ Passenger Restriction [#]')
+    ax2.set_ylim(-20, -3)
+
     
     # "Sync" axes
-    y0, y1 = ax.get_ylim()
-    ax2.set_ylim(y0 / passenger_mass, y1 / passenger_mass)
+    ax.set_ylim(-20 *passenger_mass, -3*passenger_mass)
     
     ax.set_title(f"{scen} - additional mass restriction")
 

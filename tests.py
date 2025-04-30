@@ -118,7 +118,7 @@ D_c = np.array([(0.5 * rho_isa * sp * sp * wing_area * (cd0 + k *cl_best * cl_be
 #print(cl)
 
 fig = plt.figure()
-ax = plt.subplot(211)
+ax = plt.subplot()
 ax2 = ax.twiny()
 ax.plot(speed_arr_m, D_c/1000, label= 'Parabolic drag model', linestyle = '--', color = 'orange')
 ax2.plot(speed_arr_kts, D_opap_c/1000, label='Clean config (OPAP)', linestyle='--', color = 'blue')
@@ -145,7 +145,7 @@ print(f'Image Drag vs. Speed saved in : {drag_img_path}')
 thr = np.array([thr_a320.takeoff(tas = sp, alt=0) for sp in speed_arr_kts]) #N
 
 fig2 = plt.figure()
-ax3 = plt.subplot(211)
+ax3 = plt.subplot()
 ax4 = ax3.twiny()
 ax3.plot(speed_arr_m, thr/1000.0, label= 'Thrust (OpenAP)', linestyle = '--', color = 'blue')
 ax4.plot(speed_arr_kts, thr/1000.0, linestyle='--', color = 'blue')
