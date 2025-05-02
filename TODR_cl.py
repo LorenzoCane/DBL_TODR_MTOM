@@ -191,7 +191,7 @@ print('-------------------------------------------------')
 for i in range(0, len(T)):
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
                                T[i], rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, v_takeoff=speed_val[i], mu = mu,
-                               dv0=0.5, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.001)
+                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.001)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
@@ -212,16 +212,16 @@ perc_diff = (model_to_dist - to_manuf_value) / to_manuf_value * 100.0
 
 print('-------------------------------------------------')
 print('Perc. difference between Manufacturer and model values:' )
-print(perc_diff)
-print(f'Mean abs perc. difference: {np.mean(abs(perc_diff))} %')
+print((perc_diff))
+print(f'Mean abs perc. difference: {np.mean(abs(perc_diff)):.3f} %')
 print('-------------------------------------------------')
 # Upper and lower errors from cl uncertainty
 model_upper = np.array([
-    take_off(m, T[1], rho_isa, np.min(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    take_off(m, T[1], rho_isa, cl_values[0], cd0, k, wing_area, airborne_dist, safe_margin_coef)
     for m in aircraft_mass
 ])
 model_lower = np.array([
-    take_off(m, T[1], rho_isa, np.max(cl_values), cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    take_off(m, T[1], rho_isa, cl_values[2], cd0, k, wing_area, airborne_dist, safe_margin_coef)
     for m in aircraft_mass
 ])
 print(model_lower)

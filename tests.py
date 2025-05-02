@@ -339,3 +339,5 @@ print('Computational time:')
 print(f'Classic method: {classic_time} s')
 print(f'Binary method: {bin_time} s')
 
+
+print(np.cos(0.0))

@@ -54,10 +54,17 @@ mass_restr_period = config['Mass']['period']
 
 print(f'Configuration successfully loaded from {config_file}')
 print('-------------------------------------------------')
-
+'''
 cl_file_name = 'cl_TODR_data.parquet'
-QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"
+#QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"
 NOQDM_file_name = f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet"
+add = '_normal'
+'''
+
+cl_file_name = 'cl_TODR_data_nodrag.parquet'
+NOQDM_file_name = f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_nodrag.parquet"
+add = 'nodrag'
+
 '''
 cl_file_name = 'cl_TODR_data_vel_break.parquet'
 QDM_file_name =  f"{airport_code}_TODR_QDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet"
@@ -65,7 +72,7 @@ NOQDM_file_name = f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}
 '''
 
 cl_data_path = os.path.join(output_path, cl_file_name)
-QDM_path = os.path.join(output_path, QDM_file_name)
+#QDM_path = os.path.join(output_path, QDM_file_name)
 NOQDM_path = os.path.join(output_path, NOQDM_file_name)
 files = [NOQDM_path]
 #files = [QDM_path, NOQDM_path]
@@ -139,7 +146,7 @@ img_path = './images/'
 #*********************************************************************
 #C_l finder plots
 df = pd.read_parquet(cl_data_path)
-img_out = os.path.join(img_path, 'TODR_mass.pdf')
+img_out = os.path.join(img_path, f'TODR_mass_{add}.pdf')
 
 plt.figure()
 
@@ -167,7 +174,7 @@ plt.savefig(img_out)
 
 for file, id in zip(files, ['NOQDM']): 
     df_all = pd.read_parquet(file)
-    img_name = f'{airport_code}_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.pdf'
+    img_name = f'{airport_code}_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_{add}.pdf'
 
     #img_name = f'{airport_code}_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.pdf'
     img_out = os.path.join(img_path, img_name)
@@ -190,7 +197,7 @@ for file, id in zip(files, ['NOQDM']):
 
     #---------------------------------------------------------------------------
     #TODR distr. hist
-    hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_{add}.pdf"
 
     #hist_name = f"{airport_code}_TODR_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_v_br.pdf"
 
@@ -217,7 +224,7 @@ for file, id in zip(files, ['NOQDM']):
 
     
     #temp hist
-    hist_name = f"{airport_code}_temp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    hist_name = f"{airport_code}_temp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_{add}.pdf"
 
     #hist_name = f"{airport_code}_temp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_vel_break.pdf"
 
@@ -244,7 +251,7 @@ for file, id in zip(files, ['NOQDM']):
 
 
     #sur pres hist
-    hist_name = f"{airport_code}_sp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    hist_name = f"{airport_code}_sp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_{add}.pdf"
     
     #hist_name = f"{airport_code}_sp_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_vel_break.pdf"
 
@@ -270,7 +277,7 @@ for file, id in zip(files, ['NOQDM']):
     plt.savefig(os.path.join(img_path, hist_name))
 
     #rho pres hist
-    hist_name = f"{airport_code}_rho_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist.pdf"
+    hist_name = f"{airport_code}_rho_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_{add}.pdf"
     
     #hist_name = f"{airport_code}_rho_{id}_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_hist_vel_break.pdf"
 
@@ -332,7 +339,7 @@ fig.text(0.02, 0.5, 'Mass restriction [kg]', va='center', rotation='vertical')
 fig.text(0.98, 0.5, 'Passenger Restriction [#]', va='center', rotation='vertical')
 plt.tight_layout()
 
-mtom_img_name = f'{airport_code}_MTOM_restr_pass_m{passenger_mass}.pdf'
+mtom_img_name = f'{airport_code}_MTOM_restr_pass_m{passenger_mass}_{add}.pdf'
 plt.savefig(os.path.join(img_path, mtom_img_name))
 
 #-----------------------------------------------------------------------------------------
@@ -380,7 +387,7 @@ fig.text(0.02, 0.5, 'Additional Mass restriction [kg]', va='center', rotation='v
 fig.text(0.98, 0.5, 'Additional Passenger Restriction [#]', va='center', rotation='vertical')
 plt.tight_layout()
 
-mtom_img_name = f'{airport_code}_ADD_MTOM_restr_pass_m{passenger_mass}.pdf'
+mtom_img_name = f'{airport_code}_ADD_MTOM_restr_pass_m{passenger_mass}_{add}.pdf'
 plt.savefig(os.path.join(img_path, mtom_img_name))
 
 '''
