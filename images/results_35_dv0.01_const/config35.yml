@@ -1,0 +1,69 @@
+#Configuration file
+
+#Dir and path
+Dir:
+  img_dir: './images/'
+  output_dir: './output_data/'
+  clim_data_dir: './data/'
+  clean_data_dir: './data/clean/'
+
+#Constants
+Constants:
+  r_spec: 287.0
+  pathway_incl: 0.0
+  asc: 35.0 #ft
+  climb_angle: 7.7
+  margin_coef: 1.15
+  #cl_default: 1.61 #default value for C_l coeff. to be found for each aircraft model
+
+  #ISA conditions
+ISA:
+  isa_temp: 288.15 #K
+  isa_pr: 101325 #Pa
+  isa_alt: 0.0 #m  
+
+#Aircraft specifications
+Aircraft:
+  aircr_name: 'A320'
+  aircr_engine: 'V2500-A1'
+  aircr_full_m: 78000.0 #kg (can also be found in OPEN-AP)
+
+#Airport specifications (try to autom)
+Airport:
+  airport_code: 'EBBR' #London =  EGLL , Bruxells =  EBBR, Pantelleria = LICG
+  airport_lenght: 3638.0 #m  #LIGC = 1735.0 , EGLL = 3902.0, EBBR = 3638.0 m 
+  airport_alt: 56.0 #m # LIGC = 194.0 m, EGLL = 24.0 m , EBBR = 56.0 m 
+
+#Climate data selection
+Climate:
+  model: 'ACCESS-ESM1-5' #UKESM1-0-LL or ACCESS-ESM1-5
+  months: [ 6, 7, 8 ] # month(s) number
+
+#Speed spec for Take-off distance calculation
+Speed:
+  v0: 0.01
+  decay: 'const' #please select 'exp' or 'inv' or 'exp+' or 'const'
+
+#Mass limitation:
+Mass:
+  passenger_mass: 86.0 #kg
+  period: 'Year' #Month Year Day
+
+
+#*************************************
+#Last git commit:
+# .gitignore : 1744376696
+# MTOM.py : 1745486743
+# README.md : 1744356544
+# TODR_cl.py : 1746193894
+# TODR_climate_an.py : 1746193894
+# atm_cond_import.py : 1744724775
+# config.yml : 1746193894
+# files_manager_utils.py : 1744794607
+# images : 1746193894
+# output_data : 1746193894
+# plots.py : 1746193894
+# requirements.txt : 1745065656
+# take_off_func.py : 1746024123
+# tests.py : 1746193894
+# utils.py : 1746193894
