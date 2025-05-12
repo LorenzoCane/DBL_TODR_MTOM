@@ -18,7 +18,7 @@ from pprint import pprint #“pretty-print” arbitrary Python data structures
 
 from utils import ComplexUnitConverter as conv
 from utils import rmsd
-from take_off_func import take_off, cl_finder, mtom, mtom_binary
+from take_off_func import take_off, cl_finder, mtom, mtom_binary, take_off_modified
 
 #***************************************************************************
 #import from configuration file config.yml
@@ -340,4 +340,89 @@ print(f'Classic method: {classic_time} s')
 print(f'Binary method: {bin_time} s')
 
 
-print(np.cos(0.0))
+#print(np.cos(0.0))
+
+#*************************************************************************************************
+#Test Williams code (against mine?)
+meth_modified = True
+cd0_modified = False
+
+if cd0_modified: cd0 = cd0 + mu
+
+mu = 0.02
+
+aircraft_mass = np.array([61235., 63503.,65771., 68039., 70307., 72575., 74843., 77111., 79379.]) #kg
+a_mass_err = np.ones(len(aircraft_mass))
+to_manuf_value = [1233., 1344., 1455., 1579., 1689., 1798., 1946., 2134., 2362.,] # m
+to_err = np.ones(len(to_manuf_value))
+
+#Find best C_l values for min, opt and max take-off velocities
+cl_values = []
+cl_rsmd = []
+
+for i in range(0, len(T)):
+    cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
+                               T[i], rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, v_takeoff=speed_val[i], mu = mu,
+                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.01, modified=meth_modified)
+
+    cl_values.append(cl_val)
+    cl_rsmd.append(err_cl)
+#print(np.min(cl_values))
+
+#final results
+cl_best = np.mean(cl_values)
+err_cl_best = 0.5 * (np.max(cl_values) - np.min(cl_values))
+
+print(f"C_l finding process results: C_l = {cl_best} +- {err_cl_best}")
+#cl_best = 1.41
+#***************************************************************************
+#Error analysis
+
+#model prediction and  gt - model perc diff
+model_to_dist = np.array([take_off_modified(i, T[1], rho_isa, cl_best, cd0, k, wing_area, airborne_dist, safe_margin_coef, mu=0.02) for i in aircraft_mass])
+perc_diff = (model_to_dist - to_manuf_value) / to_manuf_value * 100.0
+
+print('-------------------------------------------------')
+print('Perc. difference between Manufacturer and model values:' )
+print((perc_diff))
+print(f'Mean abs perc. difference: {np.mean(abs(perc_diff)):.3f} %')
+print('-------------------------------------------------')
+# Upper and lower errors from cl uncertainty
+model_upper = np.array([
+    take_off_modified(m, T[1], rho_isa, cl_values[0], cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    for m in aircraft_mass
+])
+model_lower = np.array([
+    take_off_modified(m, T[1], rho_isa, cl_values[2], cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    for m in aircraft_mass
+])
+#print(model_lower)
+#print(model_to_dist)
+#print(model_upper)
+
+#Compute errors
+model_err_upper = abs(model_upper - model_to_dist)
+model_err_lower = abs(model_to_dist - model_lower)
+#print(model_err_lower)
+#print(model_err_upper)
+
+
+#Plots
+plt.figure()
+
+# Model with asymmetric error bars
+plt.errorbar(aircraft_mass/1000., model_to_dist, 
+             yerr=[model_err_lower, model_err_upper],linestyle='',
+             fmt='', capsize=4, label='Model data')
+
+# Manufacturer data with symmetric error bars
+plt.errorbar(aircraft_mass/1000., to_manuf_value, yerr=to_err, linestyle='--',
+            fmt='o', capsize=4, label='Manufacturer data')
+
+plt.xlabel('Aircraft mass [x 10^3 kg]')
+plt.ylabel('TODR [m]')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+#plt.show()
+plt.savefig(os.path.join(img_path, f"TODR_mass_stop_mod_{meth_modified}_cd0_mod_{cd0_modified}.pdf"))

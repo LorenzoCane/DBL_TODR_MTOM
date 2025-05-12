@@ -9,7 +9,7 @@ Dir:
 
 #Constants
 Constants:
-  r_spec: 287.0
+  r_spec: 287.0528
   pathway_incl: 0.0
   asc: 35.0 #ft
   climb_angle: 7.7

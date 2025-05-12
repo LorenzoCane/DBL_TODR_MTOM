@@ -19,12 +19,12 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
     #print(f'weight = {weight} N')
     while True:
         # Current state
-        #D = 0.5 * rho * vel* vel * w_area * cd #parabolic "classic" drag
+        D = 0.5 * rho * vel* vel * w_area * cd #parabolic "classic" drag
         '''
         drag = Drag(ac='A320')
         D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) #OpenAP drag
         '''
-        D=0.0
+        #D=0.0
         L = 0.5 * rho * vel* vel * w_area * cl
         #print ('init:')
         #print(f'V = {vel} m/s')
@@ -53,9 +53,9 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         vel += dv
 
         # Next state
-        #D = 0.5 * rho * (vel**2) * w_area * cd
+        D = 0.5 * rho * (vel**2) * w_area * cd
         #D = drag.clean(mass=m, tas=vel*1.944, alt=0.0, vs=0.0) #OpenAP drag
-        D= 0.0
+        #D= 0.0
         L = 0.5 * rho * (vel**2) * w_area * cl
         a_next = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
         #print ('end:')
@@ -78,10 +78,47 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
     return (final_distance, vel) if return_velocity else final_distance
 
 #-----------------------------------------------------------------------------------------------------
+def take_off_modified(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
+             mu=0.02, theta=0., lift_frac=1.0, v_to=120.0, vel_break = False, return_velocity=False, dv0 = 0.01, dv_decay = 'const'):
+    vel = 0.0  # m/s
+    d = 0.0    # m
+    
+    theta = conv.convert(theta, 'deg', 'rad')
+
+    cd = cd0 + k * cl* cl
+    weight = m * 9.81
+    speeds = np.arange(0, v_to, dv0)
+    
+    L_arr = 0.5 * rho * speeds**2 * w_area * cl
+    D_arr = 0.5 * rho * speeds**2 * w_area * cd
+    a_arr = (thrust - D_arr - mu * (weight * np.cos(theta) - L_arr) - weight * np.sin(theta)) / m
+
+    # Identify index where |L - W| is minimized
+    lift_diff = np.abs(L_arr - weight)
+    idx_takeoff = np.argmin(lift_diff)
+
+    # Compute distance using trapezoidal method
+    dx_arr = []
+    for i in np.arange(1, len(speeds[0 : (idx_takeoff + 2)])):
+        v_avg = (speeds[i] + speeds[i - 1]) / 2
+        a_avg = (a_arr[i] + a_arr[i - 1]) / 2
+        if a_avg <= 0:
+            break
+        dx = v_avg * dv0 / a_avg
+        dx_arr.append(dx)
+
+    ground_roll = np.sum(dx_arr, initial=0.0)
+    airborne_distance = airborne_d
+    final_todr = (ground_roll + airborne_distance) * margin_coeff
+    final_velocity = speeds[idx_takeoff]
+
+    return (final_todr, final_velocity) if return_velocity else final_todr
+
+#-----------------------------------------------------------------------------------------------------
 
 def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa, 
                 cd_0, k_p, wing_area, airborne_dist, safe_margin_coeff, v_takeoff, 
-                mu, dv0=0.01, dv_decay='const', theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01):
+                mu, dv0=0.01, dv_decay='const', theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01, modified =False):
     
     fixed_params = dict(thrust=thr,
                         rho=rho_isa,
@@ -93,27 +130,41 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
                         mu=mu,
                         theta=theta,
                         lift_frac=1.0, 
-                        return_velocity=False,
                         vel_break = False,
                         dv0= 0.01,
                         v_to = v_takeoff,
                         dv_decay= dv_decay
                     )
-    def take_off_wrapper(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
-                     margin_coeff=1.15, mu=0., theta=0., lift_frac=1.0, return_velocity=False, dv = dv0):
-        results =  np.array([take_off(i, thrust, rho, cl, cd0, k, w_area, airborne_d, v_to= v_takeoff,
+    if modified :
+        def take_off_wrapper(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
+                     margin_coeff=1.15, mu=0.017, theta=0., lift_frac=1.0, return_velocity=False, dv = dv0):
+            results =  np.array([take_off_modified(i, thrust, rho, cl, cd0, k, w_area, airborne_d, v_to= v_takeoff,
                     margin_coeff=margin_coeff, mu=mu, theta=theta,
                     lift_frac=lift_frac, return_velocity=return_velocity, vel_break = False, dv0= dv, dv_decay='const') for i in m])
-        return results
+            return results
+    else:
+        def take_off_wrapper(m, thrust, rho, cl, cd0, k, w_area, airborne_d,
+                     margin_coeff=1.15, mu=0.017, theta=0., lift_frac=1.0, return_velocity=False, dv = dv0):
+            results =  np.array([take_off(i, thrust, rho, cl, cd0, k, w_area, airborne_d, v_to= v_takeoff,
+                    margin_coeff=margin_coeff, mu=0.02, theta=theta,
+                    lift_frac=lift_frac, return_velocity=return_velocity, vel_break = False, dv0= dv, dv_decay='const') for i in m])
+            return results
     
 
     # Grid search:
+
     cl_candidates = np.arange(cl_min, cl_max + cl_step, cl_step)
     #print(cl_candidates)
-    rmsd_values = [
-        rmsd(take_off, aircraft_mass, to_manuf_value, cl=cl_val, **fixed_params)
-        for cl_val in cl_candidates
-    ]
+    if modified:
+        rmsd_values = [
+            rmsd(take_off_modified, aircraft_mass, to_manuf_value, cl=cl_val, return_velocity = False, **fixed_params)
+            for cl_val in cl_candidates
+            ]
+    else:    
+        rmsd_values = [
+            rmsd(take_off, aircraft_mass, to_manuf_value, cl=cl_val, **fixed_params)
+            for cl_val in cl_candidates
+            ]
     #print(rmsd_values)
 
     best_cl_guess = cl_candidates[np.argmin(rmsd_values)]
@@ -121,7 +172,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
           f"with RMSD = {min(rmsd_values):.2f}")
     
 
-    
+    '''
     # Create the LeastSquares cost function.
     cost = LeastSquares(aircraft_mass, to_manuf_value, to_err, take_off_wrapper)
     
@@ -129,7 +180,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
     m = Minuit(cost,
                thrust=thr,
                rho=rho_isa,
-               cl=1.41,
+               cl=best_cl_guess,
                cd0=cd_0,
                k=k_p,
                w_area=wing_area,
@@ -151,8 +202,8 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
     m.hesse()
 
     return m.values['cl'], m.errors['cl']
-    
-    #return best_cl_guess, 0.1
+    '''
+    return best_cl_guess, 0.1
 #-----------------------------------------------------------------------------------------------------
 
 def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle):
