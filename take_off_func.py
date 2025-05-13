@@ -9,6 +9,55 @@ from openap.drag import Drag
 
 def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
              mu=0.017, theta=0., lift_frac=1.0, v_to=74.5, vel_break = False, return_velocity=False, dv0 = 0.01, dv_decay = 'const'):
+    '''
+     Simulates the ground roll phase of an aircraft's take-off run and estimates 
+     the total take-off distance required (TODR), including the airborne distance.
+
+     Parameters:
+     -----------
+     m : float
+         Aircraft mass in kilograms.
+     thrust : float
+         Engine thrust in newtons.
+     rho : float
+         Air density in kg/m^3.
+     cl : float
+         Lift coefficient (assumed constant).
+     cd0 : float
+         Zero-lift drag coefficient.
+     k : float
+         Induced drag factor.
+     w_area : float
+         Wing area in m^2.
+     airborne_d : float
+         Airborne distance in meters (after lift-off).
+     margin_coeff : float, optional
+         Safety margin multiplier applied to the total distance. Default is 1.15.
+     mu : float, optional
+         Rolling friction coefficient. Default is 0.017.
+     theta : float, optional
+         Runway slope angle in degrees (positive for uphill). Default is 0°.
+     lift_frac : float, optional
+         Fraction of weight that must be supported by lift to initiate rotation. Default is 1.0.
+     v_to : float, optional
+         Target take-off velocity in m/s. Used only if `vel_break=True`. Default is 74.5 m/s.
+     vel_break : bool, optional
+         If True, terminates ground roll when velocity reaches `v_to`, regardless of lift. Default is False.
+     return_velocity : bool, optional
+         If True, returns a tuple (take-off distance, lift-off velocity). Default is False.
+     dv0 : float, optional
+        Base velocity increment (m/s) for simulation time steps. Default is 0.01 m/s.
+     dv_decay : str, optional
+         Strategy for reducing dv as velocity increases. Options: 
+         'const' (constant dv), 'exp' (exponential decay), 
+         'exp+' (stronger exponential), 'inv' (inverse). Default is 'const'.
+
+     Returns:
+     --------
+     float or tuple
+         If return_velocity is False: total take-off distance in meters.
+         If return_velocity is True: (total take-off distance in meters, lift-off velocity in m/s).
+    '''
     vel = 0.0  # m/s
     d = 0.0    # m
     
@@ -80,6 +129,57 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
 #-----------------------------------------------------------------------------------------------------
 def take_off_modified(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
              mu=0.02, theta=0., lift_frac=1.0, v_to=150.0, vel_break = False, return_velocity=False, dv0 = 0.01, dv_decay = 'const'):
+    '''
+     Computes the total take-off distance required (TODR) for an aircraft using 
+     a vectorized and numerically efficient method based on precomputed arrays.
+
+     Unlike the original `take_off` function, which defines lift-off as the point 
+     where Lift ≥ weight * lift_frac, this version identifies the lift-off speed 
+     as the point where the absolute difference |Lift - Weight| is minimized 
+     (via np.argmin), which may not strictly satisfy the lift threshold condition.
+
+     Parameters:
+     -----------
+     m : float
+         Aircraft mass in kilograms.
+     thrust : float
+         Engine thrust in newtons.
+     rho : float
+         Air density in kg/m^3.
+     cl : float
+        Lift coefficient (assumed constant).
+     cd0 : float
+         Zero-lift drag coefficient.
+     k : float
+         Induced drag factor.
+     w_area : float
+         Wing area in m^2.
+     airborne_d : float
+        Distance covered after lift-off, in meters.
+     margin_coeff : float, optional
+         Safety margin multiplier applied to the total distance. Default is 1.15.
+     mu : float, optional
+         Rolling friction coefficient. Default is 0.02.
+     theta : float, optional
+         Runway slope angle in degrees. Default is 0°.
+     lift_frac : float, optional
+         Fraction of weight required for lift-off (not enforced in this version).
+     v_to : float, optional
+         Maximum velocity evaluated in the simulation. Default is 150 m/s.
+     vel_break : bool, optional
+         Unused placeholder. Present for compatibility.
+     return_velocity : bool, optional
+         If True, also returns the velocity at lift-off. Default is False.
+     dv0 : float, optional
+         Velocity step size. Default is 0.01 m/s.
+     dv_decay : str, optional
+         Unused placeholder. Present for compatibility.
+
+     Returns:
+     --------
+     float or tuple
+         Total take-off distance (and optionally lift-off velocity).
+    '''
     vel = 0.0  # m/s
     d = 0.0    # m
     
@@ -119,6 +219,61 @@ def take_off_modified(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coe
 def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa, 
                 cd_0, k_p, wing_area, airborne_dist, safe_margin_coeff, v_takeoff, 
                 mu, dv0=0.01, dv_decay='const', theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01, modified =False):
+    '''
+     Performs a grid search to estimate the best-fit lift coefficient (C_L)
+     that minimizes the RMSD between model-predicted and manufacturer-provided
+     take-off distance data for a given aircraft mass.
+
+     The function supports two modes:
+     - Original take-off model: Lift-off occurs when L ≥ W × lift_frac
+     - Modified take-off model: Lift-off occurs at speed where |L - W| is minimized
+
+     Parameters
+     ----------
+     aircraft_mass : array-like
+         Array of aircraft masses in kg.
+     to_manuf_value : array-like
+         Manufacturer-provided take-off distances corresponding to aircraft_mass.
+     to_err : array-like
+         Uncertainty on take-off measurements.
+     thr : float
+         Thrust in newtons.
+     rho_isa : float
+         Air density in kg/m^3.
+     cd_0 : float
+         Zero-lift drag coefficient.
+     k_p : float
+         Induced drag factor.
+     wing_area : float
+         Wing area in m^2.
+     airborne_dist : float
+         Post-liftoff distance (airborne segment) in meters.
+     safe_margin_coeff : float
+         Safety margin multiplier applied to total distance.
+     v_takeoff : float
+         Maximum take-off velocity (used to build velocity grid).
+     mu : float
+         Rolling friction coefficient.
+     dv0 : float, optional
+         Velocity step size (default: 0.01 m/s).
+     dv_decay : str, optional
+         Placeholder for decay strategy (not used).
+     theta : float, optional
+         Runway slope angle in degrees (default: 0°).
+     cl_min, cl_max : float
+         Minimum and maximum C_L values to test.
+     cl_step : float
+         Step size for C_L values.
+     modified : bool, optional
+         Whether to use the modified take-off model (default: False).
+
+     Returns
+     -------
+     best_cl_guess : float
+         Lift coefficient value yielding the lowest RMSD.
+     dummy_error : float
+         Placeholder for uncertainty (currently set to 0.1).
+    '''
     
     fixed_params = dict(thrust=thr,
                         rho=rho_isa,
@@ -227,12 +382,12 @@ def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airbor
 #-----------------------------------------------------------------------------------------------------
 
 def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle, 
-                      min_mass=60000, tol=0.5, iter_max = 1.e6):
+                      min_mass=61000, tol=1.0, iter_max = 1.e5):
     low = min_mass
     high = initial_mass
     iter = 0
 
-    while (high - low > tol) :
+    while (high - low > tol) and iter < iter_max :
         mid = (low + high) / 2
         todr = take_off(mid, thrust, rho, cl, cd0, k, wing_area, airborne_dist, margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False)
         if todr < runway_length:

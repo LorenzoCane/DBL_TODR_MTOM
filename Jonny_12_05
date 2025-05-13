@@ -2,3 +2,5 @@ Bada 3 not to be used (euro Control suggestions)
 BADA avaible : https://aircraft.airbus.com/sites/g/files/jlcbta126/files/2025-01/AC_A320_0624.pdf
 APM for all the aircrafts we want to use
 
+C_D0 used has "clean" value -> TO BE CHECKED
+TODR find the speed at which |L-W| is minimum -> lift condition is not guaranteed, still the error should be small (0.01 m/s --> ca. 10-30 m max)

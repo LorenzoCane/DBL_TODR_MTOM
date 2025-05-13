@@ -101,16 +101,20 @@ dv_decay = config['Speed']['decay']
 
 passenger_mass = config['Mass']['passenger_mass']
 
+sep = '-------------------------------------------------'
 print(f'Configuration successfully loaded from {config_file}')
-print('-------------------------------------------------')
+print(sep)
 
 #ensure path existance
 os.makedirs(img_path, exist_ok=True)
 os.makedirs(output_path, exist_ok=True)
 # Load the Parquet file (choose the right one)
 #parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
-parquet_path = os.path.join(output_path, "cl_TODR_data_nodrag.parquet")
+#parquet_path = os.path.join(output_path, "cl_TODR_data_nodrag.parquet")
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet") #vel break
+parquet_path = os.path.join(output_path, "cl_TODR_data_no_conversion.parquet")
+
+
 table = pq.read_table(parquet_path)
 # Extract and decode metadata
 metadata = table.schema.metadata
@@ -120,7 +124,7 @@ if metadata:
     cl_err = float(decoded_meta["cl_err"])
     print(f"C_l best: {cl_best}")
     print(f"C_l error: {cl_err}")
-    print('-------------------------------------------------')
+    print(sep)
 else:
     cl_best = 1.61
     print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
@@ -189,7 +193,7 @@ speed_val = np.sort([s for s in list(to_speed.values())[:3]])
 
 #Thrust
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
-T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=airport_alt_ft) for i in speed_val]) #N
+T = np.array([thr_a320.takeoff(tas = i, alt=airport_alt_ft) for i in speed_val]) #N
 
 #***************************************************************************
 #Acces .csv file
@@ -205,26 +209,26 @@ all_data = []  # list to hold each scenario's processed DataFrame
 for scenario, filename in file_dict.items():
     # Read the CSV; each file should have at least columns: "mx2t24" (temperature, [K]) and "sp" (pressure, [Pa])
     df = pd.read_csv(os.path.join(clean_data_dir, filename))
-    
+    print(f'Creating DataFrame for scenario: {scenario}')
     # Compute air density: rho = Pressure / (R * Temperature)
     df["rho"] = df["sp"] / (r_spec * df["mx2t24"])
-    
+    print("Air densities evaluated")
     # Compute TODR for each row using the same constant parameters
     df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, 
                                                airborne_dist, safe_margin_coef, mu, pathway_incl, dv0=dv0, dv_decay=dv_decay), axis=1)
-    print("ok1")
+    print("TODR evaluated")
     # Compute MTOM for each row
     df["MTOM"] = df.apply(lambda row: mtom_binary(airport_length, aircraft_mass, T[1], row["rho"], cl_best, cd0, k,
                                                   wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis = 1)
-    print("ok2")
+    print("MTOM evaluated")
     # Compute mass reduction in kg and n. of passenger
     df["mass_restr_kg"] = df["MTOM"] - aircraft_mass #kg Negative numbers
-    print('ok3')
+    
     df["mass_restr_pass"] = df['mass_restr_kg'] // passenger_mass #being neg counts one more "cancelled passanger" (conservative way)
-    print('ok4')
+    print('Mass restriction evaluated')
     # Add a column for the scenario label
     df["Scenario"] = scenario
-    
+    print(sep)
     # Remove rows where TODR, temperature, or pressure are NaN
     #df = df.dropna(subset=["TODR", "mx2t24", "sp"])
     all_data.append(df)
@@ -233,17 +237,19 @@ for scenario, filename in file_dict.items():
 df_all = pd.concat(all_data, ignore_index=True)
 print("\n=== TODR Summary by Scenario ===")
 print(df_all.groupby("Scenario")["TODR"].describe().round(2))
-print('-------------------------------------------------')
+print(sep)
 
 
 #Save data for future plots and anal
 #save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
-save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_nodrag_drag.parquet")
+#save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_nodrag_drag.parquet")
 #save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet")
+save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_no_conversion.parquet")
+
 
 df_all.to_parquet(save_path)
 print(f'All processed data saved in {save_path}')
-print('-------------------------------------------------')
+
 
 '''
 #***************************************************************************
