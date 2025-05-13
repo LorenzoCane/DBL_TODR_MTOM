@@ -28,7 +28,7 @@ Aircraft:
   aircr_engine: 'V2500-A1'
   aircr_full_m: 78000.0 #kg (can also be found in OPEN-AP)
 
-#Airport specifications (try to autom)
+#Airport specifications (try to autom via airportsdata)
 Airport:
   airport_code: 'EBBR' #London =  EGLL , Bruxells =  EBBR, Pantelleria = LICG
   airport_lenght: 3638.0 #m  #LIGC = 1735.0 , EGLL = 3902.0, EBBR = 3638.0 m 

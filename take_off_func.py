@@ -14,7 +14,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
     
     theta = conv.convert(theta, 'deg', 'rad')
     cd = cd0 + k * cl* cl
-    weight = m * 9.81
+    weight = m * 9.80665
    
     #print(f'weight = {weight} N')
     while True:
@@ -79,7 +79,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
 
 #-----------------------------------------------------------------------------------------------------
 def take_off_modified(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
-             mu=0.02, theta=0., lift_frac=1.0, v_to=120.0, vel_break = False, return_velocity=False, dv0 = 0.01, dv_decay = 'const'):
+             mu=0.02, theta=0., lift_frac=1.0, v_to=150.0, vel_break = False, return_velocity=False, dv0 = 0.01, dv_decay = 'const'):
     vel = 0.0  # m/s
     d = 0.0    # m
     

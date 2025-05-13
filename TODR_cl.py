@@ -161,7 +161,7 @@ speed_val = np.sort([s for s in list(to_speed.values())[:3]])
 
 #aircraft thrust
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
-T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=0) for i in speed_val]) #N
+T = np.array([thr_a320.takeoff(tas = sp, alt=0) for sp in speed_val]) #N
 #print(T)
 
 rho_isa = isa_pr / (r_spec * isa_temp) 
@@ -273,7 +273,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, "cl_TODR_data_Wlliams_drag.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data_no_conversion.parquet")
 
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet")
 
@@ -299,6 +299,6 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 #plt.show()
-plt.savefig(os.path.join(img_path, "TODR_mass_nodrag_141forced.pdf"))
+plt.savefig(os.path.join(img_path, "TODR_mass_no_conversion.pdf"))
 
 #plt.savefig(os.path.join(img_path, "TODR_mass_vel_break.pdf"))

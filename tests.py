@@ -81,11 +81,11 @@ opt_to_speed = to_speed['default'] #m/s
 min_to_speed = to_speed['minimum'] #m/s
 max_to_speed = to_speed['maximum'] #m/s
 speed_val = np.sort([s for s in list(to_speed.values())[:3]])
-#print(speed_val)
+print(f'Speeds: {speed_val}')
 
 #aircraft thrust
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
-T = np.array([thr_a320.takeoff(tas = conv.convert(i, 'ms', 'kts'), alt=0) for i in speed_val]) #N
+T = np.array([thr_a320.takeoff(tas = i, alt=0) for i in speed_val]) #N
 #print(T)
 
 rho_isa = isa_pr / (r_spec * isa_temp) 
@@ -345,15 +345,15 @@ print(f'Binary method: {bin_time} s')
 #*************************************************************************************************
 #Test Williams code (against mine?)
 meth_modified = True
-cd0_modified = False
+cd0_modified = True
 
 if cd0_modified: cd0 = cd0 + mu
 
 mu = 0.02
 
-aircraft_mass = np.array([61235., 63503.,65771., 68039., 70307., 72575., 74843., 77111., 79379.]) #kg
+aircraft_mass = np.array([61235., 63503., 65771., 68039., 70307., 72575., 74843., 77111., 79379.]) #kg
 a_mass_err = np.ones(len(aircraft_mass))
-to_manuf_value = [1233., 1344., 1455., 1579., 1689., 1798., 1946., 2134., 2362.,] # m
+to_manuf_value = [1233., 1344., 1455., 1579., 1689., 1798., 1946., 2134., 2362.] # m
 to_err = np.ones(len(to_manuf_value))
 
 #Find best C_l values for min, opt and max take-off velocities
@@ -362,8 +362,8 @@ cl_rsmd = []
 
 for i in range(0, len(T)):
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
-                               T[i], rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, v_takeoff=speed_val[i], mu = mu,
-                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.01, modified=meth_modified)
+                               T[i], rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, v_takeoff=150, mu = mu,
+                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.001, modified=meth_modified)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
@@ -389,11 +389,11 @@ print(f'Mean abs perc. difference: {np.mean(abs(perc_diff)):.3f} %')
 print('-------------------------------------------------')
 # Upper and lower errors from cl uncertainty
 model_upper = np.array([
-    take_off_modified(m, T[1], rho_isa, cl_values[0], cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    take_off_modified(m, T[1], rho_isa, cl_values[0], cd0, k, wing_area, airborne_dist, safe_margin_coef, mu = 0.02)
     for m in aircraft_mass
 ])
 model_lower = np.array([
-    take_off_modified(m, T[1], rho_isa, cl_values[2], cd0, k, wing_area, airborne_dist, safe_margin_coef)
+    take_off_modified(m, T[1], rho_isa, cl_values[2], cd0, k, wing_area, airborne_dist, safe_margin_coef, mu = 0.02)
     for m in aircraft_mass
 ])
 #print(model_lower)
