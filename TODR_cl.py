@@ -48,6 +48,7 @@ import matplotlib.pyplot as plt
 import os
 import yaml
 import time
+from datetime import timedelta
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -161,8 +162,11 @@ speed_val = np.sort([s for s in list(to_speed.values())[:3]])
 
 #aircraft thrust
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
-T = np.array([thr_a320.takeoff(tas = sp, alt=0) for sp in speed_val]) #N
+#T = np.array([thr_a320.takeoff(tas = sp, alt=0) for sp in speed_val]) #N no m/s to kts conv
+T = np.array([thr_a320.takeoff(tas = conv.convert(sp, 'ms', 'kts'), alt=0) for sp in speed_val]) #N conv
 #print(T)
+
+mod_func = False
 
 rho_isa = isa_pr / (r_spec * isa_temp) 
 #print(rho_isa)
@@ -190,11 +194,12 @@ print(test)
 cl_values = []
 cl_rsmd = []
 
+start_time =  time.monotonic()
 print('-------------------------------------------------')
 for i in range(0, len(T)):
     cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
                                T[i], rho_isa, cd0, k, wing_area, airborne_dist, safe_margin_coef, v_takeoff=speed_val[i], mu = mu,
-                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.001)
+                               dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.01, modified=mod_func)
 
     cl_values.append(cl_val)
     cl_rsmd.append(err_cl)
@@ -273,7 +278,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, "cl_TODR_data_no_conversion.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data_test.parquet")
 
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet")
 
@@ -299,6 +304,12 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 #plt.show()
-plt.savefig(os.path.join(img_path, "TODR_mass_no_conversion.pdf"))
+plt.savefig(os.path.join(img_path, "TODR_mass_test.pdf"))
 
 #plt.savefig(os.path.join(img_path, "TODR_mass_vel_break.pdf"))
+
+end_time = time.monotonic()
+
+comp_time = timedelta(seconds = end_time - start_time).total_seconds()
+
+print(f'Time used by C_L optimization: t = {comp_time} s')
