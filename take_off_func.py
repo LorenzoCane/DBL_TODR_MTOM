@@ -1,10 +1,8 @@
 import numpy as np
-import inspect
 from iminuit import Minuit
 from iminuit.cost import LeastSquares
 from utils import ComplexUnitConverter as conv
 from utils import rmsd
-from openap.drag import Drag
 
 
 def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
@@ -362,6 +360,47 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
 #-----------------------------------------------------------------------------------------------------
 
 def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle):
+    '''
+     Estimates the Maximum Take-Off Mass (MTOM) such that the total take-off
+     distance required (TODR) does not exceed the given runway length.
+ 
+     The function uses a coarse-to-fine grid search strategy by progressively
+     decreasing the aircraft mass until TODR fits within the runway, then refining
+     the estimate with smaller mass steps.
+ 
+     Parameters
+     ----------
+     runway_length : float
+         Maximum available take-off distance (meters).
+     initial_mass : float
+         Starting guess for aircraft mass (kg).
+     thrust : float
+         Engine thrust (N).
+     rho : float
+         Air density (kg/m^3).
+     cl : float
+         Lift coefficient.
+     cd0 : float
+         Zero-lift drag coefficient.
+     k : float
+         Induced drag coefficient.
+     wing_area : float
+         Wing surface area (m²).
+     airborne_dist : float
+         Distance required after lift-off (m).
+     safety_coef : float
+         Safety margin applied to TODR (e.g., 1.15).
+     mu : float
+         Friction coefficient during ground roll.
+     path_angle : float
+         Runway slope angle (degrees).
+ 
+     Returns
+     -------
+     mass : float
+         Estimated MTOM (kg) that ensures TODR ≤ runway_length.
+    '''
+
     mass = initial_mass
     iter = 0
     if take_off(mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist,margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False) < runway_length:
@@ -381,20 +420,72 @@ def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airbor
 
 #-----------------------------------------------------------------------------------------------------
 
-def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle, 
-                      min_mass=61000, tol=1.0, iter_max = 1.e5):
+def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k,
+                wing_area, airborne_dist, safety_coef, mu, path_angle,
+                min_mass=61000, tol=1.0, iter_max=1e5, verbose=False):
+    '''
+     Uses binary search to estimate the Maximum Take-Off Mass (MTOM)
+     such that TODR ≤ runway_length.
+ 
+     Parameters
+     ----------
+     runway_length : float
+         Available take-off distance (meters).
+     initial_mass : float
+         Upper bound for MTOM search (kg).
+     thrust : float
+         Engine thrust (N).
+     rho : float
+         Air density (kg/m^3).
+     cl : float
+         Lift coefficient.
+     cd0 : float
+         Zero-lift drag coefficient.
+     k : float
+         Induced drag coefficient.
+     wing_area : float
+         Wing surface area (m²).
+     airborne_dist : float
+         Distance required after lift-off (m).
+     safety_coef : float
+         Safety margin applied to TODR.
+     mu : float
+         Ground friction coefficient.
+     path_angle : float
+         Slope of runway (degrees).
+     min_mass : float, optional
+         Lower bound for MTOM search (default is 61000 kg).
+     tol : float, optional
+         Convergence tolerance on mass (default is 1 kg).
+     iter_max : int, optional
+         Maximum number of iterations (default is 1e5).
+     verbose : bool, optional
+         If True, print debug info.
+ 
+     Returns
+     -------
+     float
+         Estimated MTOM (kg), conservative (lower-bound) estimate.
+    '''
+        
     low = min_mass
     high = initial_mass
-    iter = 0
+    iteration = 0
 
-    while (high - low > tol) and iter < iter_max :
+    while (high - low > tol) and iteration < iter_max:
         mid = (low + high) / 2
-        todr = take_off(mid, thrust, rho, cl, cd0, k, wing_area, airborne_dist, margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False)
+        todr = take_off(mid, thrust, rho, cl, cd0, k, wing_area, airborne_dist,
+                        margin_coeff=safety_coef, mu=mu, theta=path_angle,
+                        return_velocity=False)
+
+        if verbose:
+            print(f"[Iter {iteration}] Mass: {mid:.2f} kg, TODR: {todr:.2f} m")
+
         if todr < runway_length:
             low = mid
         else:
             high = mid
 
-        iter +=1
+        iteration += 1
 
-    return low #safety friendly choice
+    return low  # Conservative estimate
