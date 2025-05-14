@@ -141,7 +141,7 @@ print(sep)
 print(f'Image Drag vs. Speed saved in : {drag_img_path}')
 
 #*************************************************************************************************
-#Thrust Test
+#Thrust Tests
 thr = np.array([thr_a320.takeoff(tas = sp, alt=0) for sp in speed_arr_kts]) #N
 
 fig2 = plt.figure()
@@ -153,11 +153,16 @@ ax3.set_xlabel('V [m/s]')
 ax4.set_xlabel('V [kts]')
 ax3.set_ylabel('Thrust [kN]')
 ax3.set_title(f'Thrust vs. speed - C_L = {cl_best}')
-ax3.set_ylim(10, 250)
+ax3.set_ylim(100, 220)
 
 for sp in speed_val:
     ax3.axvline(x=sp, color = 'red', linestyle='-', linewidth=1.5)
 
+test_vel = 100.0
+ax3.axvline(x=test_vel, color = 'green', linestyle='--', linewidth=1.5)
+ax4.axvline(x=test_vel, color = 'green', linestyle='--', linewidth=1.5)
+
+ax3.grid()
 ax3.legend()
 fig2.tight_layout()
 thr_img_path = os.path.join(img_path, f'Thrust_V_cl_{str.replace(str(cl_best),'.','_')}.pdf')
@@ -165,6 +170,28 @@ fig2.savefig(thr_img_path)
 print(sep)
 print(f'Image Thrust vs. Speed saved in : {thr_img_path}')
 
+
+#Thrust - altitude depend.
+alt_ft = np.arange(0.0, 1500.0, 10.0)
+speed_ms = np.arange(50.0, 250.0, 50.0)
+
+fig22 = plt.figure()
+for sp in speed_ms:
+    thr_alt = np.array([thr_a320.takeoff(tas = conv.convert(sp, 'ms', 'kts'), alt = elev) for elev in alt_ft])
+
+    ax33 = plt.subplot()
+    ax33.plot(alt_ft, thr_alt/1000.0, label= f'Thrust (TAS = {sp} m/s)', linestyle = '--')
+    ax33.set_xlabel('H [ft]')
+    ax33.set_ylabel('Thrust [kN]')
+    ax33.set_title(f'Thrust vs. elevation')
+    #ax33.set_ylim(10, 250)
+
+ax33.legend()
+fig22.tight_layout()
+thr_alt_img_path = os.path.join(img_path, f'Thrust_alt.pdf')
+fig22.savefig(thr_alt_img_path)
+print(sep)
+print(f'Image Thrust vs. elevation saved in : {thr_alt_img_path}')
 
 #*************************************************************************************************
 #Take-off func test
@@ -339,9 +366,7 @@ print('Computational time:')
 print(f'Classic method: {classic_time} s')
 print(f'Binary method: {bin_time} s')
 
-
-#print(np.cos(0.0))
-
+'''
 #*************************************************************************************************
 #Test Williams code (against mine?)
 meth_modified = True
@@ -426,3 +451,4 @@ plt.grid(True)
 plt.tight_layout()
 #plt.show()
 plt.savefig(os.path.join(img_path, f"TODR_mass_stop_mod_{meth_modified}_cd0_mod_{cd0_modified}.pdf"))
+'''
