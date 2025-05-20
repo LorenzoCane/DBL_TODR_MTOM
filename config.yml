@@ -30,7 +30,7 @@ Aircraft:
 
 #Airport specifications (try to autom via airportsdata)
 Airport:
-  airport_code: 'EBBR' #London =  EGLL , Bruxells =  EBBR, Pantelleria = LICG
+  airport_code: 'LGHI' #London =  EGLL , Bruxells =  EBBR, Pantelleria = LICG
   airport_lenght: 3638.0 #m  #LIGC = 1735.0 , EGLL = 3902.0, EBBR = 3638.0 m 
   airport_alt: 56.0 #m # LIGC = 194.0 m, EGLL = 24.0 m , EBBR = 56.0 m 
 

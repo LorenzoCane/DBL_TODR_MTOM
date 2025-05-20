@@ -109,10 +109,10 @@ print(sep)
 os.makedirs(img_path, exist_ok=True)
 os.makedirs(output_path, exist_ok=True)
 # Load the Parquet file (choose the right one)
-#parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
 #parquet_path = os.path.join(output_path, "cl_TODR_data_nodrag.parquet")
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet") #vel break
-parquet_path = os.path.join(output_path, "cl_TODR_data_no_conversion.parquet")
+#parquet_path = os.path.join(output_path, "cl_TODR_data_no_conversion.parquet")
 
 
 table = pq.read_table(parquet_path)
@@ -241,10 +241,10 @@ print(sep)
 
 
 #Save data for future plots and anal
-#save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
+save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}.parquet")
 #save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_nodrag_drag.parquet")
 #save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_vel_break.parquet")
-save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_no_conversion.parquet")
+#save_path = os.path.join(output_path, f"{airport_code}_TODR_NOQDM_dv_{str(dv0).replace( '.' , '_' )}_{dv_decay}_no_conversion.parquet")
 
 
 df_all.to_parquet(save_path)

@@ -147,7 +147,7 @@ k = aircraft['drag']['k']
 mu = aircraft['drag']['gears']
 
 #replicate J: Williams calc (Try and comment if needed)
-cd0 = cd0 + mu
+#cd0 = cd0 + mu
 #print(cd0)
 
 #aircraft TO speeds
@@ -278,7 +278,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, "cl_TODR_data_test.parquet")
+parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
 
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet")
 
@@ -304,7 +304,7 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 #plt.show()
-plt.savefig(os.path.join(img_path, "TODR_mass_test.pdf"))
+plt.savefig(os.path.join(img_path, "TODR_mass.pdf"))
 
 #plt.savefig(os.path.join(img_path, "TODR_mass_vel_break.pdf"))
 

@@ -18,7 +18,7 @@ from pprint import pprint #“pretty-print” arbitrary Python data structures
 
 from utils import ComplexUnitConverter as conv
 from utils import rmsd
-from take_off_func import take_off, cl_finder, mtom, mtom_binary, take_off_modified
+from take_off_func import take_off, cl_finder, mtom, mtom_binary, take_off_modified, trajectory_s2n, grid_def
 
 #***************************************************************************
 #import from configuration file config.yml
@@ -152,14 +152,14 @@ ax4.plot(speed_arr_kts, thr/1000.0, linestyle='--', color = 'blue')
 ax3.set_xlabel('V [m/s]')
 ax4.set_xlabel('V [kts]')
 ax3.set_ylabel('Thrust [kN]')
-ax3.set_title(f'Thrust vs. speed - C_L = {cl_best}')
-ax3.set_ylim(100, 220)
+ax3.set_title(f'Thrust vs. speed - Altitude = 0 ft')
+ax3.set_ylim(130, 220)
 
-for sp in speed_val:
-    ax3.axvline(x=sp, color = 'red', linestyle='-', linewidth=1.5)
+#for sp in speed_val:
+#    ax3.axvline(x=sp, color = 'red', linestyle='-', linewidth=1.5)
 
 test_vel = 100.0
-ax3.axvline(x=test_vel, color = 'green', linestyle='--', linewidth=1.5)
+ax3.axvline(x=test_vel, color = 'green', linestyle='--', linewidth=1.5, label = 'm/s - kts diff')
 ax4.axvline(x=test_vel, color = 'green', linestyle='--', linewidth=1.5)
 
 ax3.grid()
@@ -452,3 +452,28 @@ plt.tight_layout()
 #plt.show()
 plt.savefig(os.path.join(img_path, f"TODR_mass_stop_mod_{meth_modified}_cd0_mod_{cd0_modified}.pdf"))
 '''
+
+# Test parameters
+runway_length = 3000    # meters
+TODR = 2100            # take-off roll distance [m]
+climb_angle_deg = 5.0    # climb angle [°]
+grid_scale = 10         # grid extends ±10× runway length
+
+#grid
+X,Y,x, y, grid_size =  grid_def(grid_scale, runway_length)
+
+# Generate trajectory
+air_x, air_y, air_z = trajectory_s2n(runway_length, grid_size, TODR, climb_angle_deg)
+
+# Plot the trajectory: plan view and altitude profile
+fig, (ax0) = plt.subplots(figsize=(12, 5))
+
+# Plan view (X vs Y)
+ax0.plot(air_y, air_z)
+ax0.set_xlabel('y [m]')
+ax0.set_ylabel('z (m)')
+ax0.set_title('Trajectory profile')
+ax0.grid(True)
+
+
+plt.savefig(os.path.join(img_path, 'traajectory_test.pdf'))
