@@ -19,7 +19,7 @@ from openap.drag import Drag
 
 from utils import ComplexUnitConverter as conv
 from take_off_func import take_off
-from grid_function import noise_grid, rotate_grid, project_to_latlon, plot_db_contours
+from grid_function import noise_grid, rotate_grid, project_to_latlon, plot_real_map
 #***************************************************************************
 #Constants
 
@@ -28,7 +28,7 @@ R_SPEC = 287.0528
 
 pathway_incl = 0.0
 CLIMB_ANGLE_DEG = 5.0 #deg
-ENGINE_DB = 92.6 #dB
+ENGINE_DB = 110 #dB
 NORTH_DEG = 10.0 #deg
 sep = '---------------------------------------------------------------------------'
 #---------------------------------------------------------------------------
@@ -167,6 +167,39 @@ for scenario, filename in file_dict.items():
     #df = df.dropna(subset=["TODR", "mx2t24", "sp"])
     all_data.append(df)
 
+    if scenario == "Historical":
+        all_lpmax_grids = []
+        grid_scale = 10
+        grid_res = 200
+        extra_frac = 0.25
+        for i, row in df.iterrows():
+            todr = row["TODR"]
+            X, Y, Lp_ts, Lp_max, *_ = noise_grid(
+                runway_length=airport_length_m,
+                TODR=todr,
+                climb_angle_deg=CLIMB_ANGLE_DEG,
+                sound_level=ENGINE_DB,
+                grid_scale=10,
+                grid_points=200,
+                extra_frac=0.25,
+                npoints=300
+            )
+            all_lpmax_grids.append(Lp_max)
+
+        final_max_grid = np.max(np.array(all_lpmax_grids), axis=0)
+        np.save(output_path + "/final_max_noise_grid.npy", final_max_grid)
+
+        final_mean_grid = np.mean(np.array(all_lpmax_grids), axis=0)
+        np.save(output_path + "/final_mean_noise_grid.npy", final_mean_grid)
+
+        # Rotate, project and plot
+        X_rot, Y_rot = rotate_grid(X, Y, NORTH_DEG)
+        lat_grid, lon_grid = project_to_latlon(X_rot, Y_rot, airport_lat, airport_long)
+        output_name = f'{airport_code}_noise_contour_HISTORICAL.pdf'
+        plot_real_map(lat_grid, lon_grid, final_max_grid, airport_lat, airport_long,
+                      output_name, img_path)
+
+
 # Concatenate all the scenario DataFrames
 df_all = pd.concat(all_data, ignore_index=True)
 #print("\n=== TODR Summary by Scenario ===")
@@ -179,6 +212,7 @@ df_all.to_parquet(save_path)
 print(sep)
 print(f'All processed data saved in {save_path}')
 
+'''
 #***************************************************************************
 #Calculate noise grid
 all_lpmax_grids = []
@@ -204,10 +238,10 @@ for i, row in df.iterrows():
 
     # Store the Lp_max grid
     all_lpmax_grids.append(Lp_max)
-    '''
+    
     # Optionally save each one
-    np.save(output_path / f"row_{i}_Lpmax.npy", Lp_max)
-    '''
+    #np.save(output_path / f"row_{i}_Lpmax.npy", Lp_max)
+    
 
 #Compute final grid(ss)
 final_max_grid = np.max(np.array(all_lpmax_grids), axis=0)
@@ -223,6 +257,7 @@ lat_grid, lon_grid = project_to_latlon(X_rot, Y_rot, airport_lat, airport_long)
 
 output_name = f'{airport_code}_noise_contour.pdf'
 plot_db_contours(lat_grid, lon_grid, final_max_grid, output_name, output_path)
+'''
 
 #Code scheme
 '''

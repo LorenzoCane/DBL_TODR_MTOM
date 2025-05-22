@@ -4,7 +4,7 @@ import folium
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import cartopy.crs as ccrs
-import cartopy.feature as cfeature
+from cartopy.io.img_tiles import OSM
 from scipy.ndimage import rotate
 from pyproj import Proj
 from utils import ComplexUnitConverter as conv
@@ -126,14 +126,17 @@ def rotate_grid(X, Y, angle_deg):
     """
     # Rotate the noise layer
     #Lp_rotated = rotate(Lp_max, angle=angle_deg, reshape=False, order=1)  # bilinear
-    X_rot, Y_rot = rotate_grid(X, Y, angle_deg)
-    return X_rot, Y_rot #, Lp_rotated
+    theta = np.deg2rad(angle_deg)
+    X_rot = X * np.cos(theta) + Y * np.sin(theta)
+    Y_rot = -X * np.sin(theta) + Y * np.cos(theta)
+    return X_rot, Y_rot
 #-----------------------------------------------------------------------------------------------------
 def project_to_latlon(X, Y, lat0, lon0):
     proj_laea = Proj(proj='aeqd', lat_0=lat0, lon_0=lon0)
     lon_grid, lat_grid = proj_laea(X, Y, inverse=True)
     return lat_grid, lon_grid
 
+'''
 #-----------------------------------------------------------------------------------------------------
 def plot_db_contours(lat_grid, lon_grid, Lp_max, output_name, output_path, levels=[50, 55, 60]):
 
@@ -148,3 +151,28 @@ def plot_db_contours(lat_grid, lon_grid, Lp_max, output_name, output_path, level
     ax.clabel(cs, fmt='%d dB', fontsize=10)
 
     plt.savefig(os.path.join(output_path, output_name))
+'''
+#-----------------------------------------------------------------------------------------------------
+def plot_real_map(lat_grid, lon_grid, Lp_max, lat0, lon0, output_name, output_path, contour_levels=[50, 55, 60], 
+                  contour_colors=['red', 'green', 'blue'], buffer_deg=0.05):
+    tiler = OSM()
+    mercator = tiler.crs  # This is the projection of the tiles
+
+    # Define extent around the airport
+    extent = [lon0 - buffer_deg, lon0 + buffer_deg, lat0 - buffer_deg, lat0 + buffer_deg]
+
+    # Create plot
+    fig = plt.figure(figsize=(12, 10))
+    ax = plt.axes(projection=mercator)
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
+    ax.add_image(tiler, 13)  # Tile level 13 = decent detail
+
+    # Plot noise contours (projected to PlateCarree)
+    cs = ax.contour(lon_grid, lat_grid, Lp_max,
+                    levels=contour_levels, colors= contour_colors, linewidths=2,
+                    transform=ccrs.PlateCarree())
+    ax.clabel(cs, fmt='%d dB', fontsize=10)
+
+    # Save plot
+    plt.savefig(os.path.join(output_path, output_name), dpi=300)
+    plt.close()
