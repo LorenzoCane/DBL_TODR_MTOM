@@ -258,20 +258,5 @@ lat_grid, lon_grid = project_to_latlon(X_rot, Y_rot, airport_lat, airport_long)
 output_name = f'{airport_code}_noise_contour.pdf'
 plot_db_contours(lat_grid, lon_grid, final_max_grid, output_name, output_path)
 '''
-
-#Code scheme
-'''
-
-noise grid (should be autom)
--calc noise map for each TODR (max in each point)
--take mean value for each grid point (over time)
--plot contour
--add to a map
-
-
-
-rotate and add to map (how)
-
-'''
 #***************************************************************************
 #***************************************************************************
