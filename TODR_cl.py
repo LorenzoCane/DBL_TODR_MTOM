@@ -278,7 +278,7 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, "cl_TODR_data.parquet")
+parquet_path = os.path.join(output_path, f"cl_{aircraft_name}_{engine_name}_TODR_data.parquet")
 
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet")
 
