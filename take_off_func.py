@@ -1,6 +1,5 @@
 import numpy as np
-from iminuit import Minuit
-from iminuit.cost import LeastSquares
+
 from utils import ComplexUnitConverter as conv
 from utils import rmsd
 

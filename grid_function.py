@@ -1,11 +1,8 @@
 import numpy as np
 import os
-import folium
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 import cartopy.crs as ccrs
 from cartopy.io.img_tiles import OSM
-from scipy.ndimage import rotate
 from pyproj import Proj
 from utils import ComplexUnitConverter as conv
 from utils import rmsd

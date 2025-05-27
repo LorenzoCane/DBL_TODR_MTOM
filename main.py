@@ -505,10 +505,7 @@ plt.savefig(os.path.join(model_plot_path, mtom_img_name))
 - noise modification
 
 Plots:
-- Distributions (TODR and temp)
-- MTOM restrictions
 - Percentiles 
 - Noise contours
 - Noise modifications
-
 '''

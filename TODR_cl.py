@@ -58,8 +58,6 @@ from openap.kinematic import WRAP #set of kinematic models
 from openap.thrust import Thrust #thrust calc
 from openap.drag import Drag
 
-from pprint import pprint #“pretty-print” arbitrary Python data structures 
-
 from utils import ComplexUnitConverter as conv
 from utils import rmsd
 from take_off_func import take_off, cl_finder
