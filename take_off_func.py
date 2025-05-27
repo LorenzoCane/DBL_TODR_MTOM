@@ -421,7 +421,7 @@ def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airbor
 
 def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k,
                 wing_area, airborne_dist, safety_coef, mu, path_angle,
-                min_mass=61000, tol=1.0, iter_max=1e5, verbose=False):
+                min_mass=61000, tol=1.0, iter_max=1.0e3, verbose=False):
     '''
      Uses binary search to estimate the Maximum Take-Off Mass (MTOM)
      such that TODR ≤ runway_length.

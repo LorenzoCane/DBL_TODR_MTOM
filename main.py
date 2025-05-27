@@ -4,7 +4,7 @@ import subprocess
 from utils import ComplexUnitConverter as conv
 from utils import rmsd , install_requirements
 from atm_anal_func import process_scenario
-from take_off_func import take_off, mtom_binary
+from take_off_func import take_off, mtom_binary, mtom
 from grid_function import noise_grid, rotate_grid, project_to_latlon, plot_real_map
 
 install_requirements(requirements_file='requirements.txt')
@@ -241,7 +241,7 @@ for scenario, filename in file_dict.items():
                                                airborne_dist, safe_margin_coef, mu, pathway_incl), axis=1)
     print("TODR evaluated")
     # Compute MTOM for each row
-    df["MTOM"] = df.apply(lambda row: mtom_binary(airport_length, aircraft_mass, T[1], row["rho"], cl_best, cd0, k,
+    df["MTOM"] = df.apply(lambda row: mtom(airport_length, aircraft_mass, T[1], row["rho"], cl_best, cd0, k,
                                                   wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis = 1)
     print("MTOM evaluated")
     # Compute mass reduction in kg and n. of passenger
