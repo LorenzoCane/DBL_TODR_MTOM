@@ -50,8 +50,7 @@ with open(config_file, 'r') as file:
 
 
 # Accessing different sections
-img_path = config['Dir']['img_dir']
-output_path = config['Dir']['output_dir']
+cl_path = config['Dir']['cl_dir']
 clim_data_dir = config['Dir']['clim_data_dir']
 clean_data_dir = config['Dir']['clean_data_dir']
 
@@ -87,7 +86,7 @@ print(sep)
 #Ensure dir existance and create paths
 os.makedirs(clim_data_dir, exist_ok=True)
 os.makedirs(clean_data_dir, exist_ok=True) #output dir (clean data)
-os.makedirs(output_path, exist_ok=True)
+os.makedirs(cl_path, exist_ok=True)
 
 #Create a dir for each airport-aircraft combination
 model_output_path = f'./AP_{airport_code}_AC_{aircraft_name}_{engine_name}'
@@ -97,7 +96,7 @@ os.makedirs(model_plot_path, exist_ok=True)
 #***************************************************************************
 #Perform C_L evaluation if needed or request
 cl_file_name = "cl_TODR_data.parquet"
-cl_parquet_path = os.path.join(output_path, f"cl_{aircraft_name}_{engine_name}_TODR_data.parquet")
+cl_parquet_path = os.path.join(cl_path, f"cl_{aircraft_name}_{engine_name}_TODR_data.parquet")
 
 if CL_FINDER or not os.path.exists(cl_parquet_path):
     print('==========================================================')
@@ -290,7 +289,7 @@ plt.errorbar(df["mass_tonnes"], df["todr_manufacturer"],
              yerr=df["todr_manufacturer_err"], linestyle='--',
             fmt='o', capsize=4, label='Manufacturer data', color='tab:orange')
 
-plt.xlabel('Aircraft mass [10^3 kg]')
+plt.xlabel('Aircraft mass [* 10^3 kg]')
 plt.ylabel('TODR [m]')
 plt.legend()
 plt.grid(True)
@@ -321,7 +320,7 @@ plt.ylabel("TODR [m]")
 plt.title(f"TODR (JJA) {aircraft_name} - {engine_name} - {airport_code} - {id}")
 #sns.despine()
 plt.tight_layout()
-plt.savefig(os.path.join(img_path, img_name))
+plt.savefig(img_out)
 
 #---------------------------------------------------------------------------
 #TODR distr. hist
@@ -344,8 +343,8 @@ for i, scenario in enumerate(scenarios):
     axs[i].set_ylabel("Frequency")
     axs[i].grid(True)
 
-plt.tight_layout()
 plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
+plt.tight_layout()
 plt.savefig(os.path.join(model_plot_path, hist_name))
 
     
@@ -365,8 +364,8 @@ for i, scenario in enumerate(scenarios):
     axs[i].set_ylabel("Frequency")
     axs[i].grid(True)
 
+plt.suptitle("Temperature Distribution by Scenario", fontsize=16, y=1.02)
 plt.tight_layout()
-plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(model_plot_path, hist_name))
 
 
@@ -382,12 +381,12 @@ for i, scenario in enumerate(scenarios):
     subset = df_all[df_all['Scenario'] == scenario]
     axs[i].hist(subset['sp'], bins=n_bins_atm, color='skyblue', edgecolor='black')
     axs[i].set_title(f"{scenario} Scenario")
-    axs[i].set_xlabel("sp [Pa]")
+    axs[i].set_xlabel("P_sur [Pa]")
     axs[i].set_ylabel("Frequency")
     axs[i].grid(True)
 
+plt.suptitle("Surface pressure Distribution by Scenario", fontsize=16, y=1.02)
 plt.tight_layout()
-plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(model_plot_path, hist_name))
 
 #rho pres hist
@@ -402,12 +401,12 @@ for i, scenario in enumerate(scenarios):
     subset = df_all[df_all['Scenario'] == scenario]
     axs[i].hist(subset['rho'], bins=n_bins_atm, color='skyblue', edgecolor='black')
     axs[i].set_title(f"{scenario} Scenario")
-    axs[i].set_xlabel("air density [kg m^-3]")
+    axs[i].set_xlabel(r"$\rho$[kg m^-3]")
     axs[i].set_ylabel("Frequency")
     axs[i].grid(True)
 
+plt.suptitle("Air density Distribution by Scenario", fontsize=16, y=1.02)
 plt.tight_layout()
-plt.suptitle("TODR Distribution by Scenario", fontsize=16, y=1.02)
 plt.savefig(os.path.join(model_plot_path, hist_name))
 
 print(f'Images saved in {model_plot_path}')
@@ -436,8 +435,8 @@ for ax, scenario in zip(axes, mass_restr_scenarios):
     ln2 = ax2.plot(df_s['Year'], df_s['mass_restr_pass'], linestyle='-',
         label='Passenger Restriction [#]')
     
-    ax2.set_ylim(-126,-101)
-    ax.set_ylim(-126 * passenger_mass, -101 * passenger_mass)
+    ax2.set_ylim(-326,-101)
+    ax.set_ylim(-326 * passenger_mass, -101 * passenger_mass)
     ax.set_title(f"{scenario} Scenario")
 
 # Common labels
@@ -479,11 +478,11 @@ for ax, scen in zip(axes, ssp_scenarios):
     ax2 = ax.twinx()
     ln2 = ax2.plot(diff_pass.index, diff_pass[scen], linestyle='-',
         label='Δ Passenger Restriction [#]')
-    ax2.set_ylim(-20, -3)
+    ax2.set_ylim(-50, -3)
 
     
     # "Sync" axes
-    ax.set_ylim(-20 *passenger_mass, -3*passenger_mass)
+    ax.set_ylim(-50 *passenger_mass, -3*passenger_mass)
     
     ax.set_title(f"{scen} - additional mass restriction")
 

@@ -71,8 +71,7 @@ with open(config_file, 'r') as file:
 
 
 # Accessing different sections
-img_path = config['Dir']['img_dir']
-output_path = config['Dir']['output_dir']
+cl_path = config['Dir']['cl_dir']
 clim_data_dir = config['Dir']['clim_data_dir']
 clean_data_dir = config['Dir']['clean_data_dir']
 
@@ -128,8 +127,12 @@ engine_name = "V2500-A1"
 '''
 #***************************************************************************
 #Ensure dirs existance
-os.makedirs(img_path, exist_ok=True)
-os.makedirs(output_path, exist_ok=True)
+os.makedirs(cl_path, exist_ok=True)
+#Create a dir for each airport-aircraft combination
+model_output_path = f'./AP_{airport_code}_AC_{aircraft_name}_{engine_name}'
+model_plot_path = model_output_path + '/plots'
+os.makedirs(model_output_path, exist_ok=True)
+os.makedirs(model_plot_path, exist_ok=True)
 #airborne dist
 asc_m = conv.convert(asc_ft, 'ft', 'm') # m
 airborne_dist = asc_m / np.tan(conv.convert(climb_angle, 'deg', 'rad')) # m
@@ -169,12 +172,16 @@ mod_func = False
 rho_isa = isa_pr / (r_spec * isa_temp) 
 #print(rho_isa)
 #***************************************************************************
-# check TO distance calculation method (toy conditions)
+#Load aircraft masses and TO manuf results
+manuf_file = cl_path + '/TODR_MTOM_manuf' + f"/{aircraft_name}_{engine_name}.txt"
 
-aircraft_mass = np.array([61235., 63503.,65771., 68039., 70307., 72575., 74843., 77111., 79379.]) #kg
-a_mass_err = np.ones(len(aircraft_mass))
-to_manuf_value = [1233., 1344., 1455., 1579., 1689., 1798., 1946., 2134., 2362.,] # m
-to_err = np.ones(len(to_manuf_value))
+if os.path.exists(manuf_file):
+    manuf_data = np.loadtxt(manuf_file, comments="#", delimiter=",")
+    aircraft_mass = manuf_data[:, 0]
+    to_manuf_value = manuf_data[:, 1]
+    to_err = np.ones(len(to_manuf_value))
+else :
+    raise ValueError (f"Manufacturer data for aircraft: {aircraft_name} - {engine_name} not found in {cl_path + 'TODR_MTOM_manuf'}")
 
 #dim check
 if (len(aircraft_mass) != len(to_manuf_value)):
@@ -276,13 +283,14 @@ merged_meta = {**existing_meta, **encoded_meta}
 table = table.replace_schema_metadata(merged_meta)
 
 # Save to parquet
-parquet_path = os.path.join(output_path, f"cl_{aircraft_name}_{engine_name}_TODR_data.parquet")
+parquet_path = os.path.join(cl_path, f"cl_{aircraft_name}_{engine_name}_TODR_data.parquet")
 
 #parquet_path = os.path.join(output_path, "cl_TODR_data_vel_break.parquet")
 
 pq.write_table(table, parquet_path)
 print(f"Data with metadata written to {parquet_path}")
 
+'''
 #***************************************************************************
 #Plots
 plt.figure()
@@ -311,3 +319,4 @@ end_time = time.monotonic()
 comp_time = timedelta(seconds = end_time - start_time).total_seconds()
 
 print(f'Time used by C_L optimization: t = {comp_time} s')
+'''

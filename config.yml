@@ -3,7 +3,7 @@
 #Dir and path
 Dir:
   img_dir: './images/'
-  output_dir: './output_data/'
+  cl_dir: './cl_data/'
   clim_data_dir: './data/'
   clean_data_dir: './data/clean/'
 

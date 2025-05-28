@@ -51,6 +51,7 @@ class ComplexUnitConverter:
 #***************************************************************************
 
 def install_requirements(requirements_file="requirements.txt"):
+    print(f'Installing requirements (see {requirements_file})')
     def pip_install():
         try:
             # Suppress output with -q (quiet)
