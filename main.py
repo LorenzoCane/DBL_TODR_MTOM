@@ -1,14 +1,12 @@
-
 import subprocess
 
 from utils import ComplexUnitConverter as conv
 from utils import rmsd , install_requirements
+install_requirements(requirements_file='requirements.txt')
+print('---------------------------------------------------------------------------')
 from atm_anal_func import process_scenario
 from take_off_func import take_off, mtom_binary, mtom
 from grid_function import noise_grid, rotate_grid, project_to_latlon, plot_real_map
-
-install_requirements(requirements_file='requirements.txt')
-print('---------------------------------------------------------------------------')
 
 import numpy as np
 import pandas as pd
@@ -415,8 +413,8 @@ plt.savefig(os.path.join(model_plot_path, hist_name))
 print(f'Images saved in {model_plot_path}')
 
 #---------------------------------------------------------------------------
-#MTOM and mass restriction plots
-df_all = pd.read_parquet(file)
+#MTOM and mass restriction 
+df_all = pd.read_parquet(performance_parquet_path)
 #Compute period means for plot
 period_m_restr = (df_all.groupby(['Scenario', mass_restr_period])[['mass_restr_kg', 'mass_restr_pass']]
                   .mean().reset_index()

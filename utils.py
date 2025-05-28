@@ -80,13 +80,13 @@ def install_requirements(requirements_file="requirements.txt"):
 
     # Final message
     if status[0] == "done":
-        print("✅ Requirements installed successfully.")
+        print("Requirements installed successfully.")
     elif status[0] == "error":
-        print("❌ An error occurred during installation.")
+        print(" An error occurred during installation.")
     elif status[0] == "file not found":
-        print(f"❌ Requirements file '{requirements_file}' not found.")
+        print(f"Requirements file '{requirements_file}' not found.")
     else:
-        print(f"❌ {status[0]}")
+        print(f"{status[0]}")
 #***************************************************************************
 def rmsd(model, x_data, y_data, **params):
     '''
