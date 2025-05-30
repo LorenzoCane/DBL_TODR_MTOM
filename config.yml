@@ -2,10 +2,9 @@
 
 #Dir and path
 Dir:
-  img_dir: './images/'
   cl_dir: './cl_data/'
-  clim_data_dir: './data/'
-  clean_data_dir: './data/clean/'
+  clim_data_dir: './data/raw/'
+  clean_data_dir: './data/processed/'
 
 #Constants
 Constants:

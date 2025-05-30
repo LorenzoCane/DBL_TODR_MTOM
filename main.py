@@ -4,7 +4,7 @@ from utils import ComplexUnitConverter as conv
 from utils import rmsd , install_requirements
 install_requirements(requirements_file='requirements.txt')
 print('---------------------------------------------------------------------------')
-from atm_anal_func import process_scenario
+from constants import *
 from take_off_func import take_off, mtom_binary, mtom
 from grid_function import noise_grid, rotate_grid, project_to_latlon, plot_real_map
 
@@ -17,7 +17,6 @@ import yaml
 import time
 from datetime import timedelta
 import pandas as pd
-import xarray as xr
 import pyarrow as pa
 import pyarrow.parquet as pq
 import warnings
@@ -29,18 +28,10 @@ from openap.kinematic import WRAP #set of kinematic models
 from openap.thrust import Thrust #thrust calc
 from openap.drag import Drag
 #***************************************************************************
-#CONSTANTS
-G = 9.81 #m/s^2
-R_SPEC = 287.0528
-
-CLIMB_ANGLE_DEG = 5.0 #deg
-ENGINE_DB = 110 #dB
-NORTH_DEG = 10.0 #deo
-sep = '---------------------------------------------------------------------------'
+#Phases
 CL_FINDER = False
-#plots settings
-n_bins_todr = 50
-n_bins_atm = 100
+ATM_PREPROCESSING = True
+
 #***************************************************************************
 #import from configuration file config.yml
 config_file = 'config.yml'
@@ -81,16 +72,14 @@ asc_m = conv.convert(asc_ft, 'ft', 'm') # m
 airborne_dist = asc_m / np.tan(conv.convert(init_climb_angle, 'deg', 'rad')) # m
 
 print(f'Configuration successfully loaded from {config_file}')
-print(sep)
 #***************************************************************************
 #Ensure dir existance and create paths
+model_output_path = f'./AP_{airport_code}_AC_{aircraft_name}_{engine_name}'
+model_plot_path = model_output_path + '/plots'
+
 os.makedirs(clim_data_dir, exist_ok=True)
 os.makedirs(clean_data_dir, exist_ok=True) #output dir (clean data)
 os.makedirs(cl_path, exist_ok=True)
-
-#Create a dir for each airport-aircraft combination
-model_output_path = f'./AP_{airport_code}_AC_{aircraft_name}_{engine_name}'
-model_plot_path = model_output_path + '/plots'
 os.makedirs(model_output_path, exist_ok=True)
 os.makedirs(model_plot_path, exist_ok=True)
 #***************************************************************************
@@ -101,7 +90,7 @@ cl_parquet_path = os.path.join(cl_path, f"cl_{aircraft_name}_{engine_name}_TODR_
 if CL_FINDER or not os.path.exists(cl_parquet_path):
     print('==========================================================')
     print("Parquet file not found. Running CL evaluation script...")
-    subprocess.run(["python", "TODR_cl.py"], stdout=subprocess.DEVNULL)  
+    subprocess.run(["python", "cl_calc.py"], stdout=subprocess.DEVNULL)  
     print('==========================================================')
    
 # Load the Parquet file with C_L value
@@ -114,65 +103,24 @@ if metadata:
     cl_err = float(decoded_meta["cl_err"])
     print(f"C_l best: {cl_best}")
     print(f"C_l error: {cl_err}")
-    print(sep)
 else:
     cl_best = 1.61
     print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
     cl_best = 1.61
 #***************************************************************************
-#Atm data 
-file_path = os.path.join(clim_data_dir , f"cmip6_{climate_model}_{airport_code}.nc")
-#Dataset
-ds = xr.open_dataset(file_path)
-sel_months = climate_months
-
-
-# Process Historical data (1985-2014)
-df_hist = process_scenario(
-    ds,
-    var_temp_name='mx2t24_historical',
-    var_pres_name='sp_historical',
-    time_range=("1985-01-01", "2014-12-31"),
-    airport= airport_code,
-    scenario_name="Historical",
-    output_path=clean_data_dir,
-    sel_months= climate_months
-)
-
-# Process SSP scenarios (2035-2064)
-df_ssp126 = process_scenario(
-    ds,
-    var_temp_name='mx2t24_ssp126',
-    var_pres_name='sp_ssp126',
-    time_range=("2035-01-01", "2064-12-31"),
-    airport= airport_code,
-    scenario_name="SSP126",
-    output_path=clean_data_dir,
-    sel_months= climate_months
-)
-df_ssp370 = process_scenario(
-    ds,
-    var_temp_name='mx2t24_ssp370',
-    var_pres_name='sp_ssp370',
-    time_range=("2035-01-01", "2064-12-31"),
-    airport= airport_code,
-    scenario_name="SSP370",
-    output_path=clean_data_dir,
-    sel_months= climate_months
-)
-df_ssp585 = process_scenario(
-    ds,
-    var_temp_name='mx2t24_ssp585',
-    var_pres_name='sp_ssp585',
-    time_range=("2035-01-01", "2064-12-31"),
-    airport= airport_code, 
-    scenario_name="SSP585",
-    output_path=clean_data_dir,
-    sel_months= climate_months
-)
+#Processing atm data
+if ATM_PREPROCESSING:
+    print('==========================================================')
+    print("Processing atmospheric data:")
+    subprocess.run(["python", "atm_data_preprocessor.py"])  
+    print('==========================================================') 
 
 #***************************************************************************
 #TODR & MTOM calculation
+print("Evaluating aircraft performance")
+subprocess.run(["python", "performance_evaluation.py"])  
+print('==========================================================') 
+'''
 #airport data from airports library
 airports = airportsdata.load()  # key is the ICAO identifier (the default) 
 
@@ -188,7 +136,6 @@ airport_length_m = df_airport.loc[df_airport['ICAO'] == airport_code, "Runway_Le
 if airport_length_m < 0 : 
     raise ValueError(f'ICAO code {airport_code} not found.')
 
-print(sep)
 print(f'Airport: {airport_name} ({airport_code}) data loaded')
 
 #aircraft module from OpenAP
@@ -209,7 +156,6 @@ min_to_speed = to_speed['minimum'] #m/s
 max_to_speed = to_speed['maximum'] #m/s
 speed_val = np.sort([s for s in list(to_speed.values())[:3]])
 
-print(sep)
 print(f'Aircraft: {aircraft_name}-{engine_name} data loaded')
 #Thrust
 thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
@@ -257,16 +203,14 @@ for scenario, filename in file_dict.items():
 df_all = pd.concat(all_data, ignore_index=True)
 print("\n=== TODR Summary by Scenario ===")
 print(df_all.groupby("Scenario")["TODR"].describe().round(2))
-print(sep)
 
 #Save data for future plots and anal
 performance_parquet_name = f"{airport_code}_{aircraft_name}_{engine_name}_TODR_MTOM.parquet"
 performance_parquet_path = os.path.join(model_output_path, performance_parquet_name)
 
 df_all.to_parquet(performance_parquet_path)
-print(sep)
 print(f'All processed data saved in {performance_parquet_path}')
-
+'''
 #***************************************************************************
 #ROC PREDICTION
 #***************************************************************************
@@ -317,7 +261,7 @@ palette = ["#3498db", "#2ecc71", "#f1c40f", "#e74c3c"]
 sns.boxplot(x="Scenario", y="TODR", data=df_all, whis =1.5, order=order, palette=palette, showfliers=True)
 plt.xlabel("Scenario")
 plt.ylabel("TODR [m]")
-plt.title(f"TODR (JJA) {aircraft_name} - {engine_name} - {airport_code} - {id}")
+plt.title(f"TODR (month {climate_months}) -- {aircraft_name} - {engine_name} - {airport_code}")
 #sns.despine()
 plt.tight_layout()
 plt.savefig(img_out)
