@@ -22,19 +22,6 @@ import warnings
 warnings.filterwarnings('ignore') #to exclude sns warning
 
 
-import airportsdata #airport data
-from openap import prop #aircraft and engine-related data
-from openap.kinematic import WRAP #set of kinematic models
-from openap.thrust import Thrust #thrust calc
-from openap.drag import Drag
-#***************************************************************************
-#Phases
-CL_FINDER = False
-ATM_PREPROCESSING = True
-PLOTS = True
-
-#***************************************************************************
-#import from configuration file config.yml
 config_file = 'config.yml'
 
 with open(config_file, 'r') as file:
@@ -68,166 +55,14 @@ climate_months = config['Climate']['months']
 passenger_mass = config['Mass']['passenger_mass']
 mass_restr_period = config['Mass']['period']
 
-#airborne dist
-asc_m = conv.convert(asc_ft, 'ft', 'm') # m
-airborne_dist = asc_m / np.tan(conv.convert(init_climb_angle, 'deg', 'rad')) # m
 
-print(f'Configuration successfully loaded from {config_file}')
-#***************************************************************************
-#Ensure dir existance and create paths
 model_output_path = f'./AP_{airport_code}_AC_{aircraft_name}_{engine_name}'
 model_plot_path = model_output_path + '/plots'
+performance_parquet_name = f"{airport_code}_{aircraft_name}_{engine_name}_TODR_MTOM.parquet"
+performance_parquet_path = os.path.join(model_output_path, performance_parquet_name)
 
-os.makedirs(clim_data_dir, exist_ok=True)
-os.makedirs(clean_data_dir, exist_ok=True) #output dir (clean data)
-os.makedirs(cl_path, exist_ok=True)
-os.makedirs(model_output_path, exist_ok=True)
-os.makedirs(model_plot_path, exist_ok=True)
-#***************************************************************************
-#Perform C_L evaluation if needed or request
-cl_file_name = "cl_TODR_data.parquet"
 cl_parquet_path = os.path.join(cl_path, f"cl_{aircraft_name}_{engine_name}_TODR_data.parquet")
 
-if CL_FINDER or not os.path.exists(cl_parquet_path):
-    print('==========================================================')
-    print("Parquet file not found. Running CL evaluation script...")
-    subprocess.run(["python", "cl_calc.py"], stdout=subprocess.DEVNULL)  
-    print('==========================================================')
-   
-# Load the Parquet file with C_L value
-table = pq.read_table(cl_parquet_path)
-# Extract and decode metadata
-metadata = table.schema.metadata
-if metadata:
-    decoded_meta = {k.decode(): v.decode() for k, v in metadata.items()}
-    cl_best = float(decoded_meta["cl_best"])
-    cl_err = float(decoded_meta["cl_err"])
-    print(f"C_l best: {cl_best}")
-    print(f"C_l error: {cl_err}")
-else:
-    cl_best = 1.61
-    print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
-    cl_best = 1.61
-#***************************************************************************
-#Processing atm data
-if ATM_PREPROCESSING:
-    print('==========================================================')
-    print("Processing atmospheric data:")
-    subprocess.run(["python", "atm_data_preprocessor.py"])  
-    print('==========================================================') 
-
-#***************************************************************************
-#TODR & MTOM calculation
-print("Evaluating aircraft performance")
-subprocess.run(["python", "performance_evaluation.py"])  
-print('==========================================================') 
-'''
-#airport data from airports library
-airports = airportsdata.load()  # key is the ICAO identifier (the default) 
-
-selected_airport = airports[airport_code] #LIPE = Bologna Borgo Panigale
-airport_name = selected_airport['name']
-airport_lat = selected_airport['lat']
-airport_long = selected_airport['lon']
-airport_alt_ft = selected_airport['elevation'] #ft MSL elevation of the highest point of the landing area, in feet (warning: it is often wrong);
-
-#airport runway lenght from personal database
-df_airport = pd.read_csv(os.path.join(clim_data_dir, "airport_runways.csv"))
-airport_length_m = df_airport.loc[df_airport['ICAO'] == airport_code, "Runway_Length_m"].values[0] #m
-if airport_length_m < 0 : 
-    raise ValueError(f'ICAO code {airport_code} not found.')
-
-print(f'Airport: {airport_name} ({airport_code}) data loaded')
-
-#aircraft module from OpenAP
-engine = prop.engine(engine_name) #engine dict
-aircraft = prop.aircraft(aircraft_name) #aircraft dict
-wing_area = aircraft['wing']['area']
-cd0 = aircraft['drag']['cd0']
-k = aircraft['drag']['k']
-mu = aircraft['drag']['gears']
-aircraft_full_mass = aircraft['limits']['MTOW']
-
-#aircraft TO speed
-wrap = WRAP(ac=aircraft_name) #kinematic parameters
-to_speed = wrap.takeoff_speed() # m/s Take-off speed. order: default (optimum), minimum, maximum
-#print(to_speed)
-opt_to_speed = to_speed['default'] #m/s
-min_to_speed = to_speed['minimum'] #m/s
-max_to_speed = to_speed['maximum'] #m/s
-speed_val = np.sort([s for s in list(to_speed.values())[:3]])
-
-print(f'Aircraft: {aircraft_name}-{engine_name} data loaded')
-#Thrust
-thr_a320 = Thrust(ac= aircraft_name, eng= engine_name)
-T = np.array([thr_a320.takeoff(tas = i, alt=airport_alt_ft) for i in speed_val]) #N
-
-#---------------------------------------------------------------------------------------------
-#Re-read csv files
-file_dict = {
-    "Historical": airport_code + "_Historical_JJA.csv",
-    "SSP126": airport_code + "_SSP126_JJA.csv",
-    "SSP370": airport_code + "_SSP370_JJA.csv",
-    "SSP585": airport_code + "_SSP585_JJA.csv"
-}
-
-
-all_data = []  # list to hold each scenario's processed DataFrame
-for scenario, filename in file_dict.items():
-    # Read the CSV; each file should have at least columns: "mx2t24" (temperature, [K]) and "sp" (pressure, [Pa])
-    df = pd.read_csv(os.path.join(clean_data_dir, filename))
-    print(f'Creating DataFrame for scenario: {scenario}')
-    # Compute air density: rho = Pressure / (R * Temperature)
-    df["rho"] = df["sp"] / (R_SPEC * df["mx2t24"])
-    print("Air densities evaluated")
-    # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(aircraft_mass, T[1], row["rho"], cl_best, cd0, k, wing_area, 
-                                               airborne_dist, safe_margin_coef, mu, pathway_incl), axis=1)
-    print("TODR evaluated")
-    # Compute MTOM for each row
-    df["MTOM"] = df.apply(lambda row: mtom(airport_length, aircraft_mass, T[1], row["rho"], cl_best, cd0, k,
-                                                  wing_area, airborne_dist, safe_margin_coef, mu, pathway_incl), axis = 1)
-    print("MTOM evaluated")
-    # Compute mass reduction in kg and n. of passenger
-    df["mass_restr_kg"] = df["MTOM"] - aircraft_mass #kg Negative numbers
-    
-    df["mass_restr_pass"] = df['mass_restr_kg'] // passenger_mass #being neg counts one more "cancelled passanger" (conservative way)
-    print('Mass restriction evaluated')
-    # Add a column for the scenario label
-    df["Scenario"] = scenario
-    print(sep)
-    # Remove rows where TODR, temperature, or pressure are NaN
-    #df = df.dropna(subset=["TODR", "mx2t24", "sp"])
-    all_data.append(df)
-
-# Concatenate all the scenario DataFrames
-df_all = pd.concat(all_data, ignore_index=True)
-print("\n=== TODR Summary by Scenario ===")
-print(df_all.groupby("Scenario")["TODR"].describe().round(2))
-
-#Save data for future plots and anal
-performance_parquet_name = f"{airport_code}_{aircraft_name}_{engine_name}_TODR_MTOM.parquet"
-performance_parquet_path = os.path.join(model_output_path, performance_parquet_name)
-
-df_all.to_parquet(performance_parquet_path)
-print(f'All processed data saved in {performance_parquet_path}')
-'''
-#***************************************************************************
-#ROC PREDICTION
-#***************************************************************************
-#NOISE IMPACT
-#***************************************************************************
-#PLOTS
-if PLOTS:
-    print('==========================================================')
-    print("Plotting the results:")
-    subprocess.run(["python", "plots.py"])  
-    print('==========================================================') 
-
-'''
-#Save data for future plots and anal
-performance_parquet_name = f"{airport_code}_{aircraft_name}_{engine_name}_TODR_MTOM.parquet"
-performance_parquet_path = os.path.join(model_output_path, performance_parquet_name)
 #C_l finder plots
 df = pd.read_parquet(cl_parquet_path)
 img_out = os.path.join(model_plot_path, f'TODR_mass_{aircraft_name}_{engine_name}.pdf')
@@ -449,19 +284,3 @@ plt.tight_layout()
 
 mtom_img_name = f'{airport_code}_{aircraft_name}_{engine_name}_ADD_MTOM_restr_pass_m{passenger_mass}.pdf'
 plt.savefig(os.path.join(model_plot_path, mtom_img_name))
-#***************************************************************************
-'''
-
-
-
-
-'''
-- Noise calculation
-- Angle modification
-- noise modification
-
-Plots:
-- Percentiles 
-- Noise contours
-- Noise modifications
-'''
