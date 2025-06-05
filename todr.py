@@ -80,7 +80,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
             break
         if all([vel_break, vel >= v_to]):
             break
-
+        '''    
         #dv decay selection
         if dv_decay == 'exp': 
             dv = dv0 * np.exp(-L/weight)
@@ -92,7 +92,8 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
             dv = dv0
         else:
             raise ValueError(f'dv decay type "{dv_decay}" not supported. Try "exp" or "inv" or "const".\nFor further implemention suggestions please contact developers')
-
+        '''
+        dv=dv0
         a_current = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
         
         # Advance velocity
@@ -273,3 +274,74 @@ def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airbor
             #print(f'Iter #{iter+1}: MTOM = {mass}, TODR = {todr}, l_runway = {runway_length}')
 
     return mass
+
+
+def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k,
+                wing_area, airborne_dist, safety_coef, mu, path_angle,
+                min_mass=61000, tol=1.0, iter_max=1.0e3, verbose=False):
+    '''
+     Uses binary search to estimate the Maximum Take-Off Mass (MTOM)
+     such that TODR ≤ runway_length.
+ 
+     Parameters
+     ----------
+     runway_length : float
+         Available take-off distance (meters).
+     initial_mass : float
+         Upper bound for MTOM search (kg).
+     thrust : float
+         Engine thrust (N).
+     rho : float
+         Air density (kg/m^3).
+     cl : float
+         Lift coefficient.
+     cd0 : float
+         Zero-lift drag coefficient.
+     k : float
+         Induced drag coefficient.
+     wing_area : float
+         Wing surface area (m²).
+     airborne_dist : float
+         Distance required after lift-off (m).
+     safety_coef : float
+         Safety margin applied to TODR.
+     mu : float
+         Ground friction coefficient.
+     path_angle : float
+         Slope of runway (degrees).
+     min_mass : float, optional
+         Lower bound for MTOM search (default is 61000 kg).
+     tol : float, optional
+         Convergence tolerance on mass (default is 1 kg).
+     iter_max : int, optional
+         Maximum number of iterations (default is 1e5).
+     verbose : bool, optional
+         If True, print debug info.
+ 
+     Returns
+     -------
+     float
+         Estimated MTOM (kg), conservative (lower-bound) estimate.
+    '''
+        
+    low = min_mass
+    high = initial_mass
+    iteration = 0
+
+    while (high - low > tol) and iteration < iter_max:
+        mid = (low + high) / 2
+        todr = take_off(mid, thrust, rho, cl, cd0, k, wing_area, airborne_dist,
+                        margin_coeff=safety_coef, mu=mu, theta=path_angle,
+                        return_velocity=False)
+
+        if verbose:
+            print(f"[Iter {iteration}] Mass: {mid:.2f} kg, TODR: {todr:.2f} m")
+
+        if todr < runway_length:
+            low = mid
+        else:
+            high = mid
+
+        iteration += 1
+
+    return low  # Conservative estimate

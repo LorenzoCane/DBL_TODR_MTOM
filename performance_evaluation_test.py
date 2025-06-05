@@ -8,6 +8,23 @@ from todr import take_off, mtom, mtom_binary
 sys.path.insert(0,'./utils')
 from unit_converter import ComplexUnitConverter as conv
 
+def process_row(rho_val, mass_max, thr, cl_best, cd0, k, wing_area,
+                airborne_dist, MARGIN_COEFF, mu, INCL, runway_length,
+                passenger_mass):
+    '''
+     Compute aircraft permonce in parallelize way (still testing)
+    '''
+    # Compute TODR
+    todr = take_off(mass_max, thr, rho_val, cl_best, cd0, k, wing_area,
+                    airborne_dist, MARGIN_COEFF, mu, INCL)
+    # Compute MTOM
+    mtom_val = mtom_binary(runway_length, mass_max, thr, rho_val, cl_best, cd0, k,
+                           wing_area, airborne_dist, MARGIN_COEFF, mu, INCL)
+    # Mass restriction in kg and passengers
+    mass_restr = mtom_val - mass_max
+    mass_restr_pass = mass_restr // passenger_mass
+    return todr, mtom_val, mass_restr, mass_restr_pass
+
 config = load_config()
 
 cl_path = config['Dir']['cl_dir']
@@ -61,34 +78,29 @@ all_data = []  # list to hold each scenario's processed DataFrame
 for scenario, filename in file_dict.items():
     # Read the CSV; each file should have at least columns: "mx2t24" (temperature, [K]) and "sp" (pressure, [Pa])
     df = pd.read_csv(os.path.join(clean_data_dir, filename))
-    print(f'Creating DataFrame for scenario: {scenario}')
+    print(f"Processed scenario: {scenario} ({len(df)} rows)")
     # Compute air density: rho = Pressure / (R * Temperature)
     df["rho"] = df["sp"] / (R_SPEC * df["mx2t24"])
-    print("Air densities evaluated")
-    # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(mass_max, thr, row["rho"], cl_best, cd0, k, wing_area, 
-                                               airborne_dist, MARGIN_COEFF, mu, INCL), axis=1)
-    print("TODR evaluated")
-    # Compute MTOM for each row
-    df["MTOM"] = df.apply(lambda row: mtom_binary(airport_l_m, mass_max, thr, row["rho"], cl_best, cd0, k,
-                                                  wing_area, airborne_dist, MARGIN_COEFF, mu, INCL), axis = 1)
-    print("MTOM evaluated")
-    '''
-    df["MTOM"] = df.apply(lambda row: mtom(airport_l_m, mass_max, thr, row["rho"], cl_best, cd0, k,
-                                                  wing_area, airborne_dist, MARGIN_COEFF, mu, INCL), axis = 1)
-    print("MTOM evaluated")
-    '''
-    # Compute mass reduction in kg and n. of passenger
-    df["mass_restr_kg"] = df["MTOM"] - mass_max #kg Negative numbers
-    
-    df["mass_restr_pass"] = df['mass_restr_kg'] // passenger_mass #being neg counts one more "cancelled passanger" (conservative way)
-    print('Mass restriction evaluated')
-    # Add a column for the scenario label
-    df["Scenario"] = scenario
-    print(sep)
+
+    # Parallelized per-row calc
+    args_fixed = (mass_max, thr, cl_best, cd0, k, wing_area,
+              airborne_dist, MARGIN_COEFF, mu, INCL,
+              airport_l_m, passenger_mass)
+    with ProcessPoolExecutor(max_workers=4) as executor:
+        results = list(executor.map(partial(process_row, *args_fixed), df["rho"].values))
+
+    #Save results in df rows (+ check against dim failure)
+    if len(results) == len(df):
+        df["TODR"], df["MTOM"], df["mass_restr_kg"], df["mass_restr_pass"] = zip(*results)
+    else:
+        raise ValueError("Mismatch in result lengths. Check for failures in process_row.")
+
+
     # Remove rows where TODR, temperature, or pressure are NaN
     #df = df.dropna(subset=["TODR", "mx2t24", "sp"])
+    df["Scenario"] = scenario  # <-- add this before appending
     all_data.append(df)
+
 
 # Concatenate all the scenario DataFrames
 df_all = pd.concat(all_data, ignore_index=True)

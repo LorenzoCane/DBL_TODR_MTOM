@@ -8,25 +8,14 @@ print('-------------------------------------------------------------------------
 from constants import *
 
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 import yaml
-import time
-from datetime import timedelta
-import pandas as pd
-import pyarrow as pa
 import pyarrow.parquet as pq
 import warnings
 warnings.filterwarnings('ignore') #to exclude sns warning
 
 
-import airportsdata #airport data
-from openap import prop #aircraft and engine-related data
-from openap.kinematic import WRAP #set of kinematic models
-from openap.thrust import Thrust #thrust calc
-from openap.drag import Drag
+
 #***************************************************************************
 #Phases
 CL_FINDER = False
@@ -107,7 +96,7 @@ if metadata:
 else:
     cl_best = 1.61
     print(f"No metadata found in the file.\n Default value C_l ={cl_best} will be used.")
-    cl_best = 1.61
+
 #***************************************************************************
 #Processing atm data
 if ATM_PREPROCESSING:
@@ -119,7 +108,7 @@ if ATM_PREPROCESSING:
 #***************************************************************************
 #TODR & MTOM calculation
 print("Evaluating aircraft performance")
-subprocess.run(["python", "performance_evaluation.py"])  
+subprocess.run(["python", "performance_evaluation_test.py"])  
 print('==========================================================') 
 '''
 #airport data from airports library
