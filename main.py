@@ -108,7 +108,7 @@ if ATM_PREPROCESSING:
 #***************************************************************************
 #TODR & MTOM calculation
 print("Evaluating aircraft performance")
-subprocess.run(["python", "performance_evaluation_test.py"])  
+subprocess.run(["python", "performance_evaluation.py"])  
 print('==========================================================') 
 '''
 #airport data from airports library

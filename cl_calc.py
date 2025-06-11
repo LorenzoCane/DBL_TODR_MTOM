@@ -53,7 +53,7 @@ cl_rsmd = []
 
 print('-------------------------------------------------')
 for i in range(0, len(T)):
-    cl_val, err_cl = cl_finder(aircraft_mass, to_manuf_value, to_err, 
+    cl_val, err_cl = cl_finder(aircraft_name, engine_name, aircraft_mass, to_manuf_value, to_err, 
                                T[i], rho_isa, cd0, k, wing_area, airborne_dist, MARGIN_COEFF,mu = mu,
                                dv0=0.01, dv_decay='const', theta = 0.0, cl_min=1.0, cl_max=2.0, cl_step=0.01)
 

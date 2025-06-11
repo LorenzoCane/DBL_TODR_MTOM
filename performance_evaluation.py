@@ -33,6 +33,7 @@ airborne_dist = asc_m / np.tan(conv.convert(CLIMB_ANGLE_DEG, 'deg', 'rad')) # m
 rho_isa = ISA_PR / (R_SPEC * ISA_TEMP)
 
 airport_l_m = airport_get_lenght(airport_code)
+airport_elev =  airport_get_elev(airport_code)
 
 model_output_path = f'./AP_{airport_code}_AC_{aircraft_name}_{engine_name}'
 model_plot_path = model_output_path + '/plots'
@@ -66,11 +67,12 @@ for scenario, filename in file_dict.items():
     df["rho"] = df["sp"] / (R_SPEC * df["mx2t24"])
     print("Air densities evaluated")
     # Compute TODR for each row using the same constant parameters
-    df["TODR"] = df.apply(lambda row: take_off(mass_max, thr, row["rho"], cl_best, cd0, k, wing_area, 
-                                               airborne_dist, MARGIN_COEFF, mu, INCL), axis=1)
+    df["TODR"] = df.apply(lambda row: take_off(mass_max, row["rho"], cl_best, cd0, k, wing_area, 
+                                               airborne_dist,  aircraft_name, engine_name, 
+                                               alt_ft= airport_elev, margin_coeff=MARGIN_COEFF, mu=mu, theta=INCL), axis=1)
     print("TODR evaluated")
     # Compute MTOM for each row
-    df["MTOM"] = df.apply(lambda row: mtom_binary(airport_l_m, mass_max, thr, row["rho"], cl_best, cd0, k,
+    df["MTOM"] = df.apply(lambda row: mtom_binary(airport_l_m, mass_max, airport_elev, aircraft_name, engine_name, row["rho"], cl_best, cd0, k,
                                                   wing_area, airborne_dist, MARGIN_COEFF, mu, INCL), axis = 1)
     print("MTOM evaluated")
     '''

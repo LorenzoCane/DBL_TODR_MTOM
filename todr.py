@@ -4,7 +4,10 @@ from unit_converter import ComplexUnitConverter as conv
 from tools import rmsd
 import numpy as np
 
-def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15, 
+from openap.thrust import Thrust #thrust calc
+
+def take_off(m, rho, cl, cd0, k, w_area, airborne_d, aircraft_name, engine_name, 
+             alt_ft= 0.0, head_wind = 0.0, margin_coeff=1.15, 
              mu=0.017, theta=0., lift_frac=1.0, v_to=74.5, vel_break = False, return_velocity=False, dv0 = 0.01, dv_decay = 'const'):
     '''
      Simulates the ground roll phase of an aircraft's take-off run and estimates 
@@ -28,6 +31,14 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
          Wing area in m^2.
      airborne_d : float
          Airborne distance in meters (after lift-off).
+     aircraft_name : str
+         Name of the aircraft selected.
+     engine_name : str 
+         Specific engine used by the selected aircraft.
+     alt_ft : float
+         Altitude of the airport in ft ASL. 
+     head_wind: float, optional 
+         head winf velocity in m/s
      margin_coeff : float, optional
          Safety margin multiplier applied to the total distance. Default is 1.15.
      mu : float, optional
@@ -55,8 +66,12 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
          If return_velocity is False: total take-off distance in meters.
          If return_velocity is True: (total take-off distance in meters, lift-off velocity in m/s).
     '''
-    vel = 0.0  # m/s
+    ground_speed = 0.0  # m/s
+    vel = ground_speed + head_wind
     d = 0.0    # m
+
+    thr = Thrust(ac= aircraft_name, eng= engine_name)
+    thrust = thr.takeoff(tas = conv.convert(vel, 'ms', 'kts'), alt=alt_ft) #N conv
     
     theta = conv.convert(theta, 'deg', 'rad')
     cd = cd0 + k * cl* cl
@@ -78,7 +93,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         #print(f'D = {D}')
         if L >= weight * lift_frac:
             break
-        if all([vel_break, vel >= v_to]):
+        if all([vel_break, ground_speed >= v_to]):
             break
         '''    
         #dv decay selection
@@ -97,7 +112,10 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         a_current = (thrust - D - mu * (weight * np.cos(theta) - L) - weight * np.sin(theta)) / m
         
         # Advance velocity
-        vel += dv
+        ground_speed += dv
+        vel = ground_speed + head_wind
+
+        thrust = thr.takeoff(tas = conv.convert(vel, 'ms', 'kts'), alt=alt_ft) #N conv
 
         # Next state
         D = 0.5 * rho * (vel**2) * w_area * cd
@@ -114,7 +132,7 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
         if a_mean <= 0.0:
             break  # Prevent division by zero or deceleration
 
-        v_mean = vel - (0.5 * dv)
+        v_mean = ground_speed - (0.5 * dv)
         dx = v_mean * dv / a_mean
         d += dx
         #print(dv)
@@ -122,10 +140,10 @@ def take_off(m, thrust, rho, cl, cd0, k, w_area, airborne_d, margin_coeff=1.15,
 
     final_distance = (d + airborne_d) * margin_coeff
     #print(f'Model take-off vel: {vel} m/s')
-    return (final_distance, vel) if return_velocity else final_distance
+    return (final_distance, ground_speed) if return_velocity else final_distance
 
 
-def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa, 
+def cl_finder(aircraft_name, engine_name, aircraft_mass, to_manuf_value, to_err,thr, rho_isa, 
                 cd_0, k_p, wing_area, airborne_dist, safe_margin_coeff,
                 mu, dv0=0.01, dv_decay='const', theta= 0., cl_min=1.0, cl_max=2.0, cl_step=0.01):
     '''
@@ -184,12 +202,15 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
          Placeholder for uncertainty (currently set to 0.1).
     '''
     
-    fixed_params = dict(thrust=thr,
+    fixed_params = dict(
                         rho=rho_isa,
                         cd0=cd_0,
                         k=k_p,
                         w_area=wing_area,
                         airborne_d = airborne_dist,
+                        aircraft_name = aircraft_name,
+                        engine_name = engine_name,
+                        alt_ft = 0.0,
                         margin_coeff = safe_margin_coeff,
                         mu=mu,
                         theta=theta,
@@ -216,7 +237,7 @@ def cl_finder(aircraft_mass, to_manuf_value, to_err,thr, rho_isa,
 
 
 
-def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle):
+def mtom(runway_length, initial_mass, alt_ft, aircraft_name, engine_name, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle):
     '''
      Estimates the Maximum Take-Off Mass (MTOM) such that the total take-off
      distance required (TODR) does not exceed the given runway length.
@@ -260,12 +281,15 @@ def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airbor
 
     mass = initial_mass
     iter = 0
-    if take_off(mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist,margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False) < runway_length:
+    if take_off(mass, rho, cl, cd0, k, wing_area, airborne_dist,aircraft_name, engine_name, alt_ft=alt_ft,
+                 margin_coeff=safety_coef, mu=mu, 
+                theta=path_angle, return_velocity=False) < runway_length:
         return mass  # already feasible
 
     for step in [1e3, 1e2, 1e1, 1]:  # reduce mass by 1000, 100, 10, 1
         while True:
-            todr = take_off(mass, thrust, rho, cl, cd0, k, wing_area, airborne_dist, safety_coef, mu, path_angle)
+            todr = take_off(mass, rho, cl, cd0, k, wing_area, airborne_dist,aircraft_name, engine_name, alt_ft=alt_ft,
+                 margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False) 
             if todr < runway_length:
                 mass += step  # step back up to refine
                 break
@@ -276,7 +300,7 @@ def mtom(runway_length, initial_mass, thrust, rho, cl, cd0, k, wing_area, airbor
     return mass
 
 
-def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k,
+def mtom_binary(runway_length, initial_mass, alt_ft, aircraft_name, engine_name, rho, cl, cd0, k,
                 wing_area, airborne_dist, safety_coef, mu, path_angle,
                 min_mass=61000, tol=1.0, iter_max=1.0e3, verbose=False):
     '''
@@ -330,9 +354,8 @@ def mtom_binary(runway_length, initial_mass, thrust, rho, cl, cd0, k,
 
     while (high - low > tol) and iteration < iter_max:
         mid = (low + high) / 2
-        todr = take_off(mid, thrust, rho, cl, cd0, k, wing_area, airborne_dist,
-                        margin_coeff=safety_coef, mu=mu, theta=path_angle,
-                        return_velocity=False)
+        todr = take_off(mid, rho, cl, cd0, k, wing_area, airborne_dist,aircraft_name, engine_name, alt_ft=alt_ft,
+                 margin_coeff=safety_coef, mu=mu, theta=path_angle, return_velocity=False) 
 
         if verbose:
             print(f"[Iter {iteration}] Mass: {mid:.2f} kg, TODR: {todr:.2f} m")
